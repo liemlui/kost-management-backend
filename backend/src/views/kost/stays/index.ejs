@@ -1,0 +1,48 @@
+<%- include('../partials/header', { title }) %>
+
+<h1>Stays</h1>
+
+<a href="/admin/kost/stays/new">+ New Stay</a>
+
+<table border="1" cellpadding="6">
+  <thead>
+    <tr>
+      <th>Status</th>
+      <th>Tenant</th>
+      <th>Room</th>
+      <th>Type</th>
+      <th>Start</th>
+      <th>End</th>
+      <th>Price Override</th>
+      <th>Deposit Override</th>
+      <th>Action</th>
+
+    </tr>
+  </thead>
+  <tbody>
+    <% stays.forEach(s => { %>
+      <tr>
+        <td><%= s.status %></td>
+        <td><%= s.tenant_name %></td>
+        <td><%= s.room_code %></td>
+        <td><%= s.room_type_code %></td>
+        <td><%= s.start_date ? String(s.start_date).slice(0,10) : "-" %></td>
+        <td><%= s.end_date ? String(s.end_date).slice(0,10) : "-" %></td>
+        <td><%= s.monthly_price_override ?? "-" %></td>
+        <td><%= s.deposit_override ?? "-" %></td>
+        <td>
+            <% if (s.status === 'ACTIVE') { %>
+                <form method="POST" action="/admin/kost/stays/<%= s.id %>/end" style="display:inline;">
+                <button type="submit" onclick="return confirm('End this stay?');">End</button>
+                </form>
+            <% } else { %>
+                -
+            <% } %>
+        </td>
+
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<%- include('../partials/footer') %>

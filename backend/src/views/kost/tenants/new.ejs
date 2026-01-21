@@ -1,0 +1,48 @@
+<%- include('../partials/header', { title }) %>
+
+<h1>Create Tenant</h1>
+
+<form method="POST" action="/admin/kost/tenants">
+  <div>
+    <label>Full Name</label><br/>
+    <input name="full_name" required />
+  </div>
+
+  <div>
+    <label>Phone</label><br/>
+    <input name="phone" />
+  </div>
+
+  <div>
+    <label>Email</label><br/>
+    <input name="email" type="email" />
+  </div>
+
+  <div>
+    <label>ID Number (KTP/Passport)</label><br/>
+    <input name="id_number" />
+  </div>
+
+  <div>
+    <label>Emergency Contact Name</label><br/>
+    <input name="emergency_contact_name" />
+  </div>
+
+  <div>
+    <label>Emergency Contact Phone</label><br/>
+    <input name="emergency_contact_phone" />
+  </div>
+
+  <div>
+    <label>Notes</label><br/>
+    <textarea name="notes" rows="3"></textarea>
+  </div>
+
+  <br/>
+  <button type="submit">Save</button>
+</form>
+
+<br/>
+<a href="/admin/kost/tenants">← Back</a>
+
+<%- include('../partials/footer') %>

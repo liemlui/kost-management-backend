@@ -1,0 +1,30 @@
+<%- include('../partials/header', { title }) %>
+
+<h1>Rooms</h1>
+
+<a href="/admin/kost/rooms/new">+ New Room</a>
+
+<table border="1">
+  <thead>
+    <tr>
+      <th>Code</th>
+      <th>Type</th>
+      <th>Floor</th>
+      <th>Price</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% rooms.forEach(r => { %>
+      <tr>
+        <td><%= r.room_code %></td>
+        <td><%= r.room_type_code %></td>
+        <td><%= r.floor_no ?? "-" %></td>
+        <td><%= r.base_monthly_price %></td>
+        <td><%= r.status %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<%- include('../partials/footer') %>

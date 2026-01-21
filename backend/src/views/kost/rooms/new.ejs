@@ -1,0 +1,34 @@
+<%- include('../partials/header', { title }) %>
+
+<h1>Create Room</h1>
+
+<form method="POST" action="/admin/kost/rooms">
+  <div>
+    <label>Room Code</label><br/>
+    <input name="room_code" required />
+  </div>
+
+  <div>
+    <label>Room Type</label><br/>
+    <select name="room_type_id" required>
+      <% roomTypes.forEach(rt => { %>
+        <option value="<%= rt.id %>">
+          <%= rt.code %> — <%= rt.name %>
+        </option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div>
+    <label>Floor</label><br/>
+    <input type="number" name="floor_no" />
+  </div>
+
+  <br/>
+  <button type="submit">Save</button>
+</form>
+
+<br/>
+<a href="/admin/kost/rooms">← Back</a>
+
+<%- include('../partials/footer') %>

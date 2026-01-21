@@ -1,0 +1,32 @@
+<%- include('../partials/header', { title }) %>
+
+<h1>Tenants</h1>
+
+<a href="/admin/kost/tenants/new">+ New Tenant</a>
+
+<table border="1" cellpadding="6">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Phone</th>
+      <th>Email</th>
+      <th>ID No</th>
+      <th>Emergency Contact</th>
+      <th>Emergency Phone</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% tenants.forEach(t => { %>
+      <tr>
+        <td><%= t.full_name %></td>
+        <td><%= t.phone ?? "-" %></td>
+        <td><%= t.email ?? "-" %></td>
+        <td><%= t.id_number ?? "-" %></td>
+        <td><%= t.emergency_contact_name ?? "-" %></td>
+        <td><%= t.emergency_contact_phone ?? "-" %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<%- include('../partials/footer') %>
