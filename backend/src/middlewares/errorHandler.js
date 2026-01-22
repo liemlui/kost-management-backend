@@ -1,3 +1,4 @@
+// backend/src/middlewares/errorHandler.js
 const logger = require("../config/logger");
 
 function errorHandler(err, req, res, next) {

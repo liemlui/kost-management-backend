@@ -1,0 +1,64 @@
+<%- include('../partials/header', { title }) %>
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 mb-0">Edit Tenant</h1>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="/admin/kost/tenants/<%= tenant.id %>">Cancel</a>
+  </div>
+</div>
+
+<% if (errors && errors.length) { %>
+  <div class="alert alert-danger">
+    <ul class="mb-0">
+      <% errors.forEach(e => { %><li><%= e %></li><% }) %>
+    </ul>
+  </div>
+<% } %>
+
+<form method="POST" action="/admin/kost/tenants/<%= tenant.id %>" class="card">
+  <div class="card-body">
+
+    <div class="mb-3">
+      <label class="form-label">Full Name</label>
+      <input class="form-control" name="full_name" required value="<%= form.full_name || '' %>" />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Phone</label>
+      <input class="form-control" name="phone" placeholder="0812xxxx (auto saved as +62...)" value="<%= form.phone || '' %>" />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input class="form-control" name="email" type="email" value="<%= form.email || '' %>" />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">ID Number (KTP/Passport)</label>
+      <input class="form-control" name="id_number" value="<%= form.id_number || '' %>" />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Emergency Contact Name</label>
+      <input class="form-control" name="emergency_contact_name" value="<%= form.emergency_contact_name || '' %>" />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Emergency Contact Phone</label>
+      <input class="form-control" name="emergency_contact_phone" placeholder="0812xxxx (auto saved as +62...)" value="<%= form.emergency_contact_phone || '' %>" />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Notes</label>
+      <textarea class="form-control" name="notes" rows="3"><%= form.notes || '' %></textarea>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Save Changes</button>
+      <a class="btn btn-outline-secondary" href="/admin/kost/tenants/<%= tenant.id %>">Back</a>
+    </div>
+
+  </div>
+</form>
+
+<%- include('../partials/footer') %>

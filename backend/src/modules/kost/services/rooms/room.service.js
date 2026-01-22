@@ -1,5 +1,6 @@
-const roomRepo = require('../repos/room.repo');
-const stayRepo = require('../repos/stay.repo');
+// modules/kost/services/rooms/room.service.js
+const roomRepo = require('../../repos/rooms/room.repo');
+const stayRepo = require('../../repos/stays/stay.repo');
 
 async function unblockRoom({
   room_id,

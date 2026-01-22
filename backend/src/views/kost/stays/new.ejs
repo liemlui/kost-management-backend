@@ -1,61 +1,114 @@
 <%- include('../partials/header', { title }) %>
 
-<h1>Create Stay</h1>
+<h1 class="h3 mb-3">Create Stay</h1>
 
 <% if (error) { %>
-  <div style="padding:10px; background:#ffe7e7; border:1px solid #ffb3b3; margin-bottom:12px;">
+  <div class="alert alert-danger">
     <strong>Error:</strong> <%= error %>
   </div>
 <% } %>
 
-<form method="POST" action="/admin/kost/stays">
-  <div>
-    <label>Tenant</label><br/>
-    <select name="tenant_id" required>
-      <% tenants.forEach(t => { %>
-        <option value="<%= t.id %>" <%= String(form.tenant_id||"") === String(t.id) ? "selected" : "" %>>
-          <%= t.full_name %>
-        </option>
-      <% }) %>
-    </select>
-  </div>
+<form method="POST" action="/admin/kost/stays" class="card p-3">
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Tenant</label>
+      <select name="tenant_id" class="form-select" required>
+        <option value="">-- Select tenant --</option>
+        <% tenants.forEach(t => { %>
+          <option value="<%= t.id %>" <%= String(form.tenant_id||"") === String(t.id) ? "selected" : "" %>>
+            <%= t.full_name %>
+          </option>
+        <% }) %>
+      </select>
+    </div>
 
-  <div>
-    <label>Room (available only)</label><br/>
-    <select name="room_id" required>
-      <% rooms.forEach(r => { %>
-        <option value="<%= r.id %>" <%= String(form.room_id||"") === String(r.id) ? "selected" : "" %>>
-          <%= r.room_code %> — <%= r.room_type_code %>
-        </option>
-      <% }) %>
-    </select>
-  </div>
+    <div class="col-md-6">
+      <label class="form-label">Room (available only)</label>
+      <select name="room_id" class="form-select" required>
+        <option value="">-- Select room --</option>
+        <% rooms.forEach(r => { %>
+          <option value="<%= r.id %>" <%= String(form.room_id||"") === String(r.id) ? "selected" : "" %>>
+            <%= r.room_code %> — <%= r.room_type_code %>
+          </option>
+        <% }) %>
+      </select>
+    </div>
 
-  <div>
-    <label>Start Date</label><br/>
-    <input type="date" name="start_date" required value="<%= form.start_date || "" %>" />
-  </div>
+    <div class="col-md-4">
+      <label class="form-label">Check-in date</label>
+      <input type="date" name="check_in_at" class="form-control" required value="<%= form.check_in_at || "" %>" />
+    </div>
 
-  <div>
-    <label>End Date (optional)</label><br/>
-    <input type="date" name="end_date" value="<%= form.end_date || "" %>" />
-  </div>
+    <div class="col-md-4">
+      <label class="form-label">Planned check-out (optional)</label>
+      <input type="date" name="planned_check_out_at" class="form-control" value="<%= form.planned_check_out_at || "" %>" />
+    </div>
 
-  <div>
-    <label>Monthly Price Override (optional)</label><br/>
-    <input type="number" name="monthly_price_override" value="<%= form.monthly_price_override || "" %>" />
-  </div>
+    <div class="col-md-4">
+      <label class="form-label">Rent period</label>
+      <select name="rent_period" class="form-select" required>
+        <% ['DAILY','WEEKLY','BIWEEKLY','MONTHLY'].forEach(p => { %>
+          <option value="<%= p %>" <%= form.rent_period === p ? "selected" : "" %>><%= p %></option>
+        <% }) %>
+      </select>
+      <div class="form-text">Jika MONTHLY, sistem akan set anchor day default dari tanggal check-in.</div>
+    </div>
 
-  <div>
-    <label>Deposit Override (optional)</label><br/>
-    <input type="number" name="deposit_override" value="<%= form.deposit_override || "" %>" />
-  </div>
+    <div class="col-md-4">
+      <label class="form-label">Agreed rent amount</label>
+      <input type="number" name="agreed_rent_amount" class="form-control" required min="0" step="0.01"
+             value="<%= form.agreed_rent_amount || "" %>" />
+    </div>
 
-  <br/>
-  <button type="submit">Save</button>
+    <div class="col-md-4">
+      <label class="form-label">Deposit amount (optional)</label>
+      <input type="number" name="deposit_amount" class="form-control" min="0" step="0.01"
+             value="<%= form.deposit_amount || "" %>" />
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Billing anchor day (MONTHLY only, optional)</label>
+      <input type="number" name="billing_anchor_day" class="form-control" min="1" max="31"
+             value="<%= form.billing_anchor_day || "" %>" />
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Electricity mode</label>
+      <select name="electricity_mode" class="form-select">
+        <% ['METERED','INCLUDED','FIXED'].forEach(m => { %>
+          <option value="<%= m %>" <%= form.electricity_mode === m ? "selected" : "" %>><%= m %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Electricity fixed amount (if FIXED)</label>
+      <input type="number" name="electricity_fixed_amount" class="form-control" min="0" step="0.01"
+             value="<%= form.electricity_fixed_amount || "" %>" />
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Water fixed amount (optional)</label>
+      <input type="number" name="water_fixed_amount" class="form-control" min="0" step="0.01"
+             value="<%= form.water_fixed_amount || "" %>" />
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Internet fixed amount (optional)</label>
+      <input type="number" name="internet_fixed_amount" class="form-control" min="0" step="0.01"
+             value="<%= form.internet_fixed_amount || "" %>" />
+    </div>
+
+    <div class="col-12">
+      <label class="form-label">Notes (optional)</label>
+      <textarea name="notes" class="form-control" rows="3"><%= form.notes || "" %></textarea>
+    </div>
+
+    <div class="col-12 d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <a class="btn btn-outline-secondary" href="/admin/kost/stays">Back</a>
+    </div>
+  </div>
 </form>
-
-<br/>
-<a href="/admin/kost/stays">← Back</a>
 
 <%- include('../partials/footer') %>

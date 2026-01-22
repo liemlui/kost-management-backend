@@ -1,0 +1,76 @@
+<%- include('../partials/header', { title }) %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h3 mb-1"><%= mode === "edit" ? "Edit Amenity" : "New Amenity" %></h1>
+    <div class="text-muted">This is a master record used by rooms.</div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="/admin/kost/amenities">Back</a>
+  </div>
+</div>
+<% if (typeof query !== "undefined" && query.created) { %>
+  <div class="alert alert-success">
+    Saved! Amenity created successfully.
+  </div>
+<% } %>
+
+<% if (typeof query !== "undefined" && query.updated) { %>
+  <div class="alert alert-success">
+    Saved! Amenity updated successfully.
+  </div>
+<% } %>
+
+
+<div class="card p-3" style="max-width: 720px">
+  <form method="POST" action="<%= formAction %>">
+    <div class="row g-2">
+      <div class="col-md-4">
+        <label class="form-label">Code</label>
+        <input name="code" class="form-control" value="<%= amenity.code || '' %>" required />
+      </div>
+      <div class="col-md-8">
+        <label class="form-label">Name</label>
+        <input name="name" class="form-control" value="<%= amenity.name || '' %>" required />
+      </div>
+    </div>
+
+    <div class="row g-2 mt-1">
+      <div class="col-md-6">
+        <label class="form-label">Category</label>
+        <input name="category" class="form-control" value="<%= amenity.category || '' %>" required />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Unit Label (optional)</label>
+        <input name="unit_label" class="form-control" value="<%= amenity.unit_label || '' %>" placeholder="pcs, unit, set..." />
+      </div>
+    </div>
+
+    <div class="form-check form-switch mt-3">
+      <input class="form-check-input" type="checkbox" role="switch" id="is_active" name="is_active"
+             <%= (amenity.is_active === true || amenity.is_active === 1) ? "checked" : "" %> />
+      <label class="form-check-label" for="is_active">Active</label>
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+      <button class="btn btn-dark" type="submit">Save</button>
+      <a class="btn btn-outline-secondary" href="/admin/kost/amenities">Cancel</a>
+    </div>
+  </form>
+</div>
+<script>
+  (function () {
+    const form = document.querySelector("form");
+    if (!form) return;
+    form.addEventListener("submit", function () {
+      const btn = form.querySelector('button[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Saving...";
+      }
+    });
+  })();
+</script>
+
+<%- include('../partials/footer') %>

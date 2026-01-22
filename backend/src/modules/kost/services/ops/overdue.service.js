@@ -1,5 +1,6 @@
-const overdueRepo = require('../repos/overdue.repo');
-const stayService = require('./stay.service');
+// modules/kost/services/ops/overdue.service.js
+const overdueRepo = require('../../repos/ops/overdue.repo');
+const stayService = require('../stays/stay.service');
 
 async function runHPlus7OverdueCheck({ actor_id }) {
   if (!actor_id) {

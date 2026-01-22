@@ -1,3 +1,4 @@
+// backend/src/app.js
 const express = require("express");
 const helmet = require("helmet");
 const path = require("path");
@@ -5,7 +6,7 @@ const path = require("path");
 const requestLogger = require("./middlewares/requestLogger");
 const errorHandler = require("./middlewares/errorHandler");
 
-const kostRoutes = require("./modules/kost/kost.routes");
+const kostRoutes = require("./modules/kost/routes");
 
 
 const app = express();
@@ -16,7 +17,7 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // static
-app.use("/public", express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public")));
 
 // view engine (for quick admin UI)
 app.set("view engine", "ejs");

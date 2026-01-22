@@ -1,45 +1,88 @@
 <%- include('../partials/header', { title }) %>
 
-<h1>Stays</h1>
+<h1 class="h3 mb-3">Stays</h1>
 
-<a href="/admin/kost/stays/new">+ New Stay</a>
+<div class="mb-3">
+  <a class="btn btn-primary" href="/admin/kost/stays/new">+ New Stay</a>
+</div>
+<form method="GET" action="/admin/kost/stays" class="row g-2 mb-3">
+  <div class="col-md-3">
+    <select name="status" class="form-select">
+      <% const s = (filters && filters.status) ? filters.status : "ACTIVE"; %>
+      <option value="ACTIVE" <%= s==="ACTIVE"?"selected":"" %>>ACTIVE</option>
+      <option value="ENDED" <%= s==="ENDED"?"selected":"" %>>ENDED</option>
+      <option value="FORCED_ENDED" <%= s==="FORCED_ENDED"?"selected":"" %>>FORCED_ENDED</option>
+      <option value="ALL" <%= s==="ALL"?"selected":"" %>>ALL</option>
+    </select>
+  </div>
 
-<table border="1" cellpadding="6">
+  <div class="col-md-5">
+    <input
+      type="text"
+      name="q"
+      class="form-control"
+      placeholder="Search tenant / room..."
+      value="<%= (filters && filters.q) ? filters.q : "" %>"
+    />
+  </div>
+
+  <div class="col-md-4 d-flex gap-2">
+    <button class="btn btn-primary" type="submit">Filter</button>
+    <a class="btn btn-outline-secondary" href="/admin/kost/stays">Reset</a>
+    <a class="btn btn-success ms-auto" href="/admin/kost/stays/new">+ New Stay</a>
+  </div>
+</form>
+
+
+<table class="table table-bordered table-striped align-middle">
   <thead>
     <tr>
       <th>Status</th>
       <th>Tenant</th>
       <th>Room</th>
-      <th>Type</th>
-      <th>Start</th>
-      <th>End</th>
-      <th>Price Override</th>
-      <th>Deposit Override</th>
-      <th>Action</th>
-
+      <th>Check-in</th>
+      <th>Planned check-out</th>
+      <th>Check-out</th>
+      <th>Period</th>
+      <th>Agreed rent</th>
+      <th>Deposit</th>
+      <th style="width:160px;">Action</th>
     </tr>
   </thead>
   <tbody>
+    <% if (!stays || stays.length === 0) { %>
+      <tr>
+        <td colspan="10" class="text-muted">No stays yet.</td>
+      </tr>
+    <% } %>
+
     <% stays.forEach(s => { %>
       <tr>
-        <td><%= s.status %></td>
+        <td>
+          <span class="badge <%= s.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary' %>">
+            <%= s.status %>
+          </span>
+        </td>
         <td><%= s.tenant_name %></td>
         <td><%= s.room_code %></td>
-        <td><%= s.room_type_code %></td>
-        <td><%= s.start_date ? String(s.start_date).slice(0,10) : "-" %></td>
-        <td><%= s.end_date ? String(s.end_date).slice(0,10) : "-" %></td>
-        <td><%= s.monthly_price_override ?? "-" %></td>
-        <td><%= s.deposit_override ?? "-" %></td>
+        <td><%= s.check_in_at ? String(s.check_in_at).slice(0,10) : "-" %></td>
+        <td><%= s.planned_check_out_at ? String(s.planned_check_out_at).slice(0,10) : "-" %></td>
+        <td><%= s.check_out_at ? String(s.check_out_at).slice(0,10) : "-" %></td>
+        <td><%= s.rent_period %></td>
+        <td><%= s.agreed_rent_amount ?? "-" %></td>
+        <td><%= s.deposit_amount ?? "-" %></td>
         <td>
-            <% if (s.status === 'ACTIVE') { %>
-                <form method="POST" action="/admin/kost/stays/<%= s.id %>/end" style="display:inline;">
-                <button type="submit" onclick="return confirm('End this stay?');">End</button>
-                </form>
-            <% } else { %>
-                -
-            <% } %>
-        </td>
+          <a class="btn btn-sm btn-outline-secondary" href="/admin/kost/stays/<%= s.id %>">Detail</a>
 
+          <% if (s.status === 'ACTIVE') { %>
+            <form method="POST"
+                  action="/admin/kost/stays/<%= s.id %>/checkout"
+                  style="display:inline;"
+                  onsubmit="return confirm('Checkout this stay?');">
+              <button class="btn btn-sm btn-outline-danger" type="submit">Checkout</button>
+            </form>
+          <% } %>
+        </td>
       </tr>
     <% }) %>
   </tbody>

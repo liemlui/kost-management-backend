@@ -1,3 +1,4 @@
+// backend/src/config/logger.js
 function log(level, msg, meta) {
   const ts = new Date().toISOString();
   const payload = meta ? ` ${JSON.stringify(meta)}` : "";

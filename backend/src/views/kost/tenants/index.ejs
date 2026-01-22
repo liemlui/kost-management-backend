@@ -1,32 +1,75 @@
 <%- include('../partials/header', { title }) %>
 
-<h1>Tenants</h1>
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 mb-0">Tenants</h1>
+  <a class="btn btn-primary" href="/admin/kost/tenants/new">+ New Tenant</a>
+</div>
 
-<a href="/admin/kost/tenants/new">+ New Tenant</a>
+<form class="card mb-3" method="GET" action="/admin/kost/tenants">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-6">
+        <label class="form-label">Search</label>
+        <input class="form-control" name="q" placeholder="name / phone / email / id" value="<%= q || '' %>">
+      </div>
 
-<table border="1" cellpadding="6">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Phone</th>
-      <th>Email</th>
-      <th>ID No</th>
-      <th>Emergency Contact</th>
-      <th>Emergency Phone</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% tenants.forEach(t => { %>
-      <tr>
-        <td><%= t.full_name %></td>
-        <td><%= t.phone ?? "-" %></td>
-        <td><%= t.email ?? "-" %></td>
-        <td><%= t.id_number ?? "-" %></td>
-        <td><%= t.emergency_contact_name ?? "-" %></td>
-        <td><%= t.emergency_contact_phone ?? "-" %></td>
-      </tr>
-    <% }) %>
-  </tbody>
-</table>
+      <div class="col-md-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="is_active">
+          <option value="" <%= (is_active === '' ? 'selected' : '') %>>All</option>
+          <option value="true" <%= (is_active === 'true' ? 'selected' : '') %>>Active</option>
+          <option value="false" <%= (is_active === 'false' ? 'selected' : '') %>>Inactive</option>
+        </select>
+      </div>
+
+      <div class="col-md-3 d-flex gap-2">
+        <button class="btn btn-outline-primary w-100" type="submit">Filter</button>
+        <a class="btn btn-outline-secondary w-100" href="/admin/kost/tenants">Reset</a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-striped table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th>ID No</th>
+          <th>Status</th>
+          <th class="text-end">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!tenants || !tenants.length) { %>
+          <tr><td colspan="6" class="text-center text-muted py-4">No tenants found</td></tr>
+        <% } %>
+
+        <% tenants.forEach(t => { %>
+          <tr>
+            <td><a href="/admin/kost/tenants/<%= t.id %>"><%= t.full_name %></a></td>
+            <td><%= t.phone ?? "-" %></td>
+            <td><%= t.email ?? "-" %></td>
+            <td><%= t.id_number ?? "-" %></td>
+            <td>
+              <% if (t.is_active) { %>
+                <span class="badge text-bg-success">ACTIVE</span>
+              <% } else { %>
+                <span class="badge text-bg-secondary">INACTIVE</span>
+              <% } %>
+            </td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-secondary" href="/admin/kost/tenants/<%= t.id %>/edit">Edit</a>
+              <a class="btn btn-sm btn-outline-primary" href="/admin/kost/tenants/<%= t.id %>">Detail</a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 <%- include('../partials/footer') %>

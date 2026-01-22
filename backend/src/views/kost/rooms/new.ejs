@@ -1,34 +1,74 @@
-<%- include('../partials/header', { title }) %>
+<%- include("../partials/header", { title }) %>
 
-<h1>Create Room</h1>
+<h1 class="h3 mb-3">New Room</h1>
 
-<form method="POST" action="/admin/kost/rooms">
-  <div>
-    <label>Room Code</label><br/>
-    <input name="room_code" required />
+<% if (errors && errors.length) { %>
+  <div class="alert alert-danger">
+    <ul class="mb-0">
+      <% errors.forEach(e => { %><li><%= e %></li><% }) %>
+    </ul>
+  </div>
+<% } %>
+
+<form method="POST" action="/admin/kost/rooms" class="card p-3">
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label">Code</label>
+      <input class="form-control mono" name="code" value="<%= form.code %>" required placeholder="A-101" />
+    </div>
+
+    <div class="col-md-5">
+      <label class="form-label">Room Type</label>
+      <select class="form-select" name="room_type_id" required>
+        <option value="">-- select --</option>
+        <% roomTypes.forEach(rt => { %>
+          <option value="<%= rt.id %>" <%= String(form.room_type_id)===String(rt.id) ? "selected" : "" %>>
+            <%= rt.code %> — <%= rt.name %>
+          </option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Floor</label>
+      <select class="form-select" name="floor" required>
+        <% floorOptions.forEach(f => { %>
+          <option value="<%= f %>" <%= Number(form.floor)===f ? "selected" : "" %>><%= f %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Position Zone</label>
+      <select class="form-select" name="position_zone">
+        <% zoneOptions.forEach(z => { %>
+          <option value="<%= z %>" <%= (form.position_zone || "")===z ? "selected" : "" %>>
+            <%= z === "" ? "-- none --" : z %>
+          </option>
+        <% }) %>
+      </select>
+      <div class="form-text">Optional</div>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Status</label>
+      <select class="form-select" name="status" required>
+        <% statusOptions.forEach(s => { %>
+          <option value="<%= s %>" <%= (form.status || "AVAILABLE")===s ? "selected" : "" %>><%= s %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="col-12">
+      <label class="form-label">Notes</label>
+      <textarea class="form-control" name="notes" rows="3"><%= form.notes || "" %></textarea>
+    </div>
   </div>
 
-  <div>
-    <label>Room Type</label><br/>
-    <select name="room_type_id" required>
-      <% roomTypes.forEach(rt => { %>
-        <option value="<%= rt.id %>">
-          <%= rt.code %> — <%= rt.name %>
-        </option>
-      <% }) %>
-    </select>
+  <div class="d-flex gap-2 mt-3">
+    <button class="btn btn-primary" type="submit">Create</button>
+    <a class="btn btn-outline-secondary" href="/admin/kost/rooms">Cancel</a>
   </div>
-
-  <div>
-    <label>Floor</label><br/>
-    <input type="number" name="floor_no" />
-  </div>
-
-  <br/>
-  <button type="submit">Save</button>
 </form>
 
-<br/>
-<a href="/admin/kost/rooms">← Back</a>
-
-<%- include('../partials/footer') %>
+<%- include("../partials/footer") %>

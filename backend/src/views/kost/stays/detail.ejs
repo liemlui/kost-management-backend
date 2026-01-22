@@ -1,0 +1,48 @@
+<%- include('../partials/header', { title }) %>
+
+<h1 class="h3 mb-3">Stay Detail</h1>
+
+<div class="card p-3 mb-3">
+  <div class="row">
+    <div class="col-md-6">
+      <div class="mb-2"><strong>Status:</strong> <%= stay.status %></div>
+      <div class="mb-2"><strong>Tenant:</strong> <%= stay.tenant_name %> (ID: <%= stay.tenant_id %>)</div>
+      <div class="mb-2"><strong>Room:</strong> <%= stay.room_code %> — <%= stay.room_type_code %> (<%= stay.room_type_name %>)</div>
+      <div class="mb-2"><strong>Rent period:</strong> <%= stay.rent_period %></div>
+      <div class="mb-2"><strong>Agreed rent:</strong> <%= stay.agreed_rent_amount %></div>
+      <div class="mb-2"><strong>Deposit:</strong> <%= stay.deposit_amount %></div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="mb-2"><strong>Check-in:</strong> <%= String(stay.check_in_at).slice(0,10) %></div>
+      <div class="mb-2"><strong>Planned check-out:</strong> <%= stay.planned_check_out_at ? String(stay.planned_check_out_at).slice(0,10) : "-" %></div>
+      <div class="mb-2"><strong>Check-out:</strong> <%= stay.check_out_at ? String(stay.check_out_at).slice(0,10) : "-" %></div>
+      <div class="mb-2"><strong>Billing anchor day:</strong> <%= stay.billing_anchor_day ?? "-" %></div>
+      <div class="mb-2"><strong>Electricity mode:</strong> <%= stay.electricity_mode %></div>
+      <div class="mb-2"><strong>Fixed amounts:</strong>
+        Elec <%= stay.electricity_fixed_amount %>,
+        Water <%= stay.water_fixed_amount %>,
+        Internet <%= stay.internet_fixed_amount %>
+      </div>
+    </div>
+  </div>
+
+  <% if (stay.notes) { %>
+    <hr/>
+    <div><strong>Notes:</strong> <%= stay.notes %></div>
+  <% } %>
+</div>
+
+<div class="d-flex gap-2">
+  <a class="btn btn-outline-secondary" href="/admin/kost/stays">Back</a>
+
+  <% if (stay.status === 'ACTIVE') { %>
+    <form method="POST"
+          action="/admin/kost/stays/<%= stay.id %>/checkout"
+          onsubmit="return confirm('Checkout this stay?');">
+      <button class="btn btn-danger" type="submit">Checkout</button>
+    </form>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

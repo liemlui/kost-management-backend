@@ -1,0 +1,123 @@
+<%- include("../partials/header", { title }) %>
+
+<h1 class="h3 mb-3"><%= mode === "new" ? "New Room Type" : "Edit Room Type" %></h1>
+
+<% if (errors && errors.length) { %>
+  <div class="alert alert-danger">
+    <ul class="mb-0">
+      <% errors.forEach(e => { %><li><%= e %></li><% }) %>
+    </ul>
+  </div>
+<% } %>
+
+<form method="POST" action="<%= action %>" class="card p-3">
+  <div class="row g-3">
+    <div class="col-md-3">
+      <label class="form-label">Code</label>
+      <input class="form-control" name="code" value="<%= form.code %>" required />
+    </div>
+
+    <div class="col-md-5">
+      <label class="form-label">Name</label>
+      <input class="form-control" name="name" value="<%= form.name %>" required />
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Base Price</label>
+      <input class="form-control" name="base_monthly_price" value="<%= form.base_monthly_price %>" />
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Deposit</label>
+        <input class="form-control" name="deposit_amount" value="<%= form.deposit_amount %>" />
+    </div>
+
+    <hr class="my-3">
+<h6 class="text-muted">Room Dimensions & Facilities</h6>
+
+
+    <div class="col-md-2">
+      <label class="form-label">Room Width (m)</label>
+      <input class="form-control" name="room_width_m" value="<%= form.room_width_m %>" />
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Room Length (m)</label>
+      <input class="form-control" name="room_length_m" value="<%= form.room_length_m %>" />
+    </div>
+
+    <div class="col-md-2 d-flex align-items-center">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="has_ac" <%= form.has_ac ? "checked" : "" %> />
+        <label class="form-check-label">Has AC</label>
+      </div>
+    </div>
+
+    <div class="col-md-2 d-flex align-items-center">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="has_fan" <%= form.has_fan ? "checked" : "" %> />
+        <label class="form-check-label">Has Fan</label>
+      </div>
+    </div>
+
+    <div class="col-md-2 d-flex align-items-center">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="is_capsule" <%= form.is_capsule ? "checked" : "" %> />
+        <label class="form-check-label">Capsule</label>
+      </div>
+    </div>
+
+    <div class="col-md-2 d-flex align-items-center">
+        <div class="form-check form-switch mt-4">
+            <input class="form-check-input" type="checkbox" name="is_active" <%= form.is_active ? "checked" : "" %> />
+            <label class="form-check-label fw-semibold">Active</label>
+        </div>
+    </div>
+
+
+    <div class="col-md-3">
+      <label class="form-label">Bathroom Location</label>
+      <select class="form-select" name="bathroom_location">
+        <option value="">-- none --</option>
+        <option value="INSIDE" <%= form.bathroom_location==="INSIDE" ? "selected" : "" %>>INSIDE</option>
+        <option value="OUTSIDE" <%= form.bathroom_location==="OUTSIDE" ? "selected" : "" %>>OUTSIDE</option>
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Bath Width (m)</label>
+      <input class="form-control" name="bathroom_width_m" value="<%= form.bathroom_width_m %>" />
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Bath Length (m)</label>
+      <input class="form-control" name="bathroom_length_m" value="<%= form.bathroom_length_m %>" />
+    </div>
+    <hr class="my-3">
+<h6 class="text-muted">Bed & Misc</h6>
+
+
+    <div class="col-md-3">
+      <label class="form-label">Bed Type</label>
+      <input class="form-control" name="bed_type" value="<%= form.bed_type %>" />
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Bed Size (cm)</label>
+      <input class="form-control" name="bed_size_cm" value="<%= form.bed_size_cm %>" />
+    </div>
+  </div>
+
+<div class="col-12">
+    <label class="form-label">Notes</label>
+    <textarea class="form-control" name="notes" rows="3" placeholder="Internal notes (admin only)"><%= form.notes %></textarea>
+</div>
+
+
+  <div class="d-flex gap-2 mt-3">
+    <button class="btn btn-primary" type="submit"><%= mode === "new" ? "Create" : "Save" %></button>
+    <a class="btn btn-outline-secondary" href="/admin/kost/room-types">Back</a>
+  </div>
+</form>
+
+<%- include("../partials/footer") %>

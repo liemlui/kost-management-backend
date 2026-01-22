@@ -1,5 +1,6 @@
-const stayRepo = require("../repos/stay.repo");
-const roomRepo = require("../repos/room.repo");
+// modules/kost/services/stays/stay.service.js
+const stayRepo = require("../../repos/stays/stay.repo");
+const roomRepo = require("../../repos/rooms/room.repo");
 
 async function createStay(payload) {
   const { tenant_id, room_id, check_in_at } = payload;

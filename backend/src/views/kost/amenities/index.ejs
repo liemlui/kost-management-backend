@@ -1,0 +1,60 @@
+<%- include('../partials/header', { title }) %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h3 mb-1">Amenities</h1>
+    <div class="text-muted">Master list (used by room amenities mapping).</div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="/admin/kost/rooms">Back to Rooms</a>
+    <a class="btn btn-dark" href="/admin/kost/amenities/new">New Amenity</a>
+  </div>
+</div>
+
+<% if (!amenities || amenities.length === 0) { %>
+  <div class="alert alert-light">No amenities yet.</div>
+<% } else { %>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Unit</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% amenities.forEach(a => { %>
+          <tr>
+            <td class="mono"><%= a.code %></td>
+            <td><%= a.name %></td>
+            <td><%= a.category %></td>
+            <td><%= a.unit_label || "-" %></td>
+            <td>
+              <% if (a.is_active) { %>
+                <span class="badge text-bg-success">ACTIVE</span>
+              <% } else { %>
+                <span class="badge text-bg-secondary">INACTIVE</span>
+              <% } %>
+            </td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-primary" href="/admin/kost/amenities/<%= a.id %>/edit">Edit</a>
+              <form method="POST" action="/admin/kost/amenities/<%= a.id %>/toggle" class="d-inline"
+                    onsubmit="return confirm('Toggle active status?')">
+                <button class="btn btn-sm btn-outline-dark" type="submit">
+                  <%= a.is_active ? "Deactivate" : "Activate" %>
+                </button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+
+<%- include('../partials/footer') %>

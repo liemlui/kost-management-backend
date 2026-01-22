@@ -1,5 +1,8 @@
-const app = require("./app");
+// backend/src/server.js
+require("dotenv").config();
 const env = require("./config/env");
+
+const app = require("./app");
 const logger = require("./config/logger");
 const { query } = require("./db/pool");
 

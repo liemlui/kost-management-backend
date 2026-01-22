@@ -1,5 +1,4 @@
-const dotenv = require("dotenv");
-
+// backend/src/config/env.js
 function mustGet(name) {
   const v = process.env[name];
   if (!v) throw new Error(`Missing env var: ${name}`);
