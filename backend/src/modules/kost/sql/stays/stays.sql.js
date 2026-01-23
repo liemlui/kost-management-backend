@@ -1,31 +1,38 @@
 // modules/kost/sql/stays/stays.sql.js
 module.exports = {
-createStay: `
-  INSERT INTO kost.stays (
-    tenant_id,
-    room_id,
-    check_in_at,
-    rent_period,
-    billing_anchor_day,
-    planned_check_out_at,
+ createStay: `
+    INSERT INTO kost.stays (
+      tenant_id,
+      room_id,
+      check_in_at,
+      rent_period,
+      billing_anchor_day,
+      planned_check_out_at,
 
-    base_rent_amount,
-    additional_rent_amount,
-    discount_amount,
-    agreed_rent_amount,
+      base_rent_amount,
+      additional_rent_amount,
+      additional_rent_reason,
 
-    deposit_amount,
-    electricity_mode,
-    notes,
-    status,
-    created_by
-  ) VALUES (
-    $1,$2,$3,$4,$5,$6,
-    $7,$8,$9,$10,
-    $11,$12,$13,'ACTIVE',$14
-  )
-  RETURNING id;
-`,
+      discount_amount,
+      discount_reason,
+
+      agreed_rent_amount,
+
+      deposit_amount,
+      electricity_mode,
+      notes,
+      status,
+      created_by
+    ) VALUES (
+      $1,$2,$3,$4,$5,$6,
+      $7,$8,$9,
+      $10,$11,
+      $12,
+      $13,$14,$15,'ACTIVE',$16
+    )
+    RETURNING id;
+  `,
+
 
 
 

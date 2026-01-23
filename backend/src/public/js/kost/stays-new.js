@@ -1,4 +1,4 @@
-/* global document */
+/* global document, window, bootstrap */
 (function () {
   function num(v) {
     var n = Number(v);
@@ -8,7 +8,6 @@
     n = Math.round(num(n));
     return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   }
-
   function qs(sel, root) {
     return (root || document).querySelector(sel);
   }
@@ -25,13 +24,15 @@
   var elAdditional = document.getElementById("additional_rent_amount");
   var elAdditionalReason = document.getElementById("additional_rent_reason");
   var elDiscount = document.getElementById("discount_amount");
+  var elDiscountReason = document.getElementById("discount_reason");
   var elTotalPrev = document.getElementById("total_rent_preview");
 
+  var elAutoFill = document.getElementById("preset_autofill");
+  var elPresetBadge = document.getElementById("preset_mode_badge");
   var elUseAC = document.getElementById("preset_use_ac");
   var elZone = document.getElementById("preset_zone");
-  var elAutoFill = document.getElementById("preset_autofill");
-  var btnApplyPreset = document.getElementById("btn_apply_preset");
 
+  var btnSave = document.getElementById("btnSave");
   var btnApprove = document.getElementById("btnApprove");
   var modalEl = document.getElementById("confirmModal");
 
@@ -67,6 +68,23 @@
     return preset;
   }
 
+  function setMode(mode) {
+    if (!elPresetBadge) return;
+    if (mode === "MANUAL") {
+      elPresetBadge.textContent = "MANUAL";
+      elPresetBadge.className = "badge text-bg-warning";
+    } else {
+      elPresetBadge.textContent = "AUTO";
+      elPresetBadge.className = "badge text-bg-secondary";
+    }
+  }
+
+  function syncDiscountReasonRule() {
+    if (!elDiscount || !elDiscountReason) return;
+    var hasDiscount = num(elDiscount.value) > 0;
+    elDiscountReason.required = hasDiscount;
+  }
+
   function recomputePreview(opts) {
     opts = opts || {};
     var room = getSelectedRoomData();
@@ -75,7 +93,8 @@
     if (elBasePrev) elBasePrev.value = formatIDR(base);
 
     if (opts.applyPreset && elAutoFill && elAutoFill.checked && elAdditional) {
-      elAdditional.value = computePresetAdditional();
+      elAdditional.value = String(computePresetAdditional());
+      setMode("AUTO");
     }
 
     var additional = elAdditional ? num(elAdditional.value) : 0;
@@ -116,37 +135,78 @@
     set("sum_total", "Rp " + formatIDR(total));
 
     set("sum_additional_reason", (elAdditionalReason && elAdditionalReason.value) ? elAdditionalReason.value : "-");
-
-    var discReasonInput = qs('input[name="discount_reason"]', form);
-    set("sum_discount_reason", discReasonInput && discReasonInput.value ? discReasonInput.value : "-");
+    set("sum_discount_reason", (elDiscountReason && elDiscountReason.value) ? elDiscountReason.value : "-");
   }
 
-  // events
+  function showModal() {
+    if (!modalEl) return;
+    var modal = window.bootstrap && window.bootstrap.Modal
+      ? window.bootstrap.Modal.getOrCreateInstance(modalEl)
+      : null;
+    if (modal) modal.show();
+  }
+
+  // =========================
+  // Events
+  // =========================
   if (elRoom) elRoom.addEventListener("change", function () { recomputePreview({ applyPreset: true }); });
   if (elUseAC) elUseAC.addEventListener("change", function () { recomputePreview({ applyPreset: true }); });
   if (elZone) elZone.addEventListener("change", function () { recomputePreview({ applyPreset: true }); });
 
-  if (btnApplyPreset) btnApplyPreset.addEventListener("click", function () {
-    if (elAdditional) elAdditional.value = computePresetAdditional();
-    recomputePreview({ applyPreset: false });
-  });
-
-  if (elAdditional) elAdditional.addEventListener("input", function () { recomputePreview({ applyPreset: false }); });
-  if (elDiscount) elDiscount.addEventListener("input", function () { recomputePreview({ applyPreset: false }); });
-
-  // ✅ isi summary setiap modal akan tampil
-  if (modalEl) {
-    modalEl.addEventListener("show.bs.modal", function () {
-      if (!elTenant.value || !elRoom.value || !elCheckin.value) return;
+  // Additional: manual input -> lock to MANUAL
+  if (elAdditional) {
+    elAdditional.addEventListener("input", function () {
+      if (elAutoFill) elAutoFill.checked = false;
+      setMode("MANUAL");
       recomputePreview({ applyPreset: false });
-      fillSummary();
     });
   }
 
-  if (btnApprove) btnApprove.addEventListener("click", function () {
-    form.submit();
-  });
+  if (elAutoFill) {
+    elAutoFill.addEventListener("change", function () {
+      setMode(elAutoFill.checked ? "AUTO" : "MANUAL");
+      recomputePreview({ applyPreset: true });
+    });
+  }
+
+  if (elDiscount) {
+    elDiscount.addEventListener("input", function () {
+      syncDiscountReasonRule();
+      recomputePreview({ applyPreset: false });
+    });
+  }
+
+  if (elDiscountReason) {
+    elDiscountReason.addEventListener("input", function () {
+      // just to update validation state when discount toggles
+      syncDiscountReasonRule();
+    });
+  }
+
+  // Save -> validate first, then show modal
+  if (btnSave) {
+    btnSave.addEventListener("click", function () {
+      syncDiscountReasonRule();
+
+      if (!form.checkValidity()) {
+        form.classList.add("was-validated");
+        return;
+      }
+
+      recomputePreview({ applyPreset: false });
+      fillSummary();
+      showModal();
+    });
+  }
+
+  if (btnApprove) {
+    btnApprove.addEventListener("click", function () {
+      form.submit();
+    });
+  }
 
   // initial
+  setMode("AUTO");
+  syncDiscountReasonRule();
   recomputePreview({ applyPreset: true });
 })();

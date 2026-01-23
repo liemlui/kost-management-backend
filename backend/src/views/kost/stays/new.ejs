@@ -8,7 +8,7 @@
   </div>
 <% } %>
 
-<form id="stayForm" method="POST" action="/admin/kost/stays" class="card p-3">
+<form id="stayForm" method="POST" action="/admin/kost/stays" class="card p-3 needs-validation" novalidate>
   <div class="row g-3">
 
     <!-- Tenant -->
@@ -49,15 +49,15 @@
     <!-- Dates / Period -->
     <div class="col-md-4">
       <label class="form-label">Check-in date</label>
-<input
-  id="check_in_at"
-  type="date"
-  name="check_in_at"
-  class="form-control"
-  required
-  min="<%= todayISO %>"
-  value="<%= form.check_in_at || "" %>"
-/>
+      <input
+        id="check_in_at"
+        type="date"
+        name="check_in_at"
+        class="form-control"
+        required
+        min="<%= todayISO %>"
+        value="<%= form.check_in_at || "" %>"
+      />
       <div class="form-text">Tidak boleh tanggal lampau.</div>
     </div>
 
@@ -70,18 +70,13 @@
       </select>
     </div>
 
-    <div class="col-md-4">
-      <label class="form-label">Planned check-out</label>
-      <input id="planned_checkout_preview" type="text" class="form-control" value="Auto calculated on save" readonly />
-      <div class="form-text">Final planned checkout dihitung server saat Save.</div>
-    </div>
-
     <hr class="my-2"/>
 
     <!-- Pricing Preview -->
     <div class="col-12">
       <h5 class="mb-2">Contract Pricing (Preview)</h5>
       <div class="row g-3">
+
         <div class="col-md-4">
           <label class="form-label">Base rent (from Room Type)</label>
           <div class="input-group">
@@ -121,6 +116,19 @@
               value="<%= form.discount_amount || "" %>"
             />
           </div>
+
+          <div class="mt-2">
+            <label class="form-label">Discount reason (optional)</label>
+            <input
+              id="discount_reason"
+              name="discount_reason"
+              type="text"
+              class="form-control"
+              maxlength="200"
+              value="<%= form.discount_reason || "" %>"
+            />
+            <div class="form-text">Wajib diisi jika discount > 0.</div>
+          </div>
         </div>
 
         <div class="col-md-8">
@@ -143,6 +151,7 @@
           </div>
           <div class="form-text">Total = base + additional - discount.</div>
         </div>
+
       </div>
     </div>
 
@@ -150,8 +159,18 @@
     <div class="col-12 mt-2">
       <h6 class="mb-2">Preset helpers (optional)</h6>
 
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="preset_autofill" checked>
+          <label class="form-check-label" for="preset_autofill">
+            Auto-fill additional dari preset
+          </label>
+        </div>
+        <span id="preset_mode_badge" class="badge text-bg-secondary">AUTO</span>
+      </div>
+
       <div class="row g-3 align-items-end">
-        <div class="col-md-3">
+        <div class="col-md-6">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="preset_use_ac">
             <label class="form-check-label" for="preset_use_ac">
@@ -160,7 +179,7 @@
           </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-6">
           <label class="form-label">Zone override</label>
           <select id="preset_zone" class="form-select">
             <option value="AUTO">AUTO (use room zone)</option>
@@ -169,22 +188,6 @@
             <option value="BACK">BACK (+0)</option>
           </select>
           <div class="form-text">AUTO membaca zone dari room.position_zone.</div>
-        </div>
-
-        <div class="col-md-3">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="preset_autofill" checked>
-            <label class="form-check-label" for="preset_autofill">
-              Auto-fill Additional from presets
-            </label>
-          </div>
-          <div class="form-text">Matikan kalau mau isi additional manual.</div>
-        </div>
-
-        <div class="col-md-3">
-          <button type="button" id="btn_apply_preset" class="btn btn-outline-secondary w-100">
-            Apply preset now
-          </button>
         </div>
       </div>
 
@@ -198,13 +201,33 @@
     <!-- Legacy / Optional -->
     <div class="col-md-4">
       <label class="form-label">Deposit amount (optional)</label>
-      <input id="deposit_amount" type="number" name="deposit_amount" class="form-control" min="0" step="0.01" value="<%= form.deposit_amount || "" %>" />
+      <input
+        id="deposit_amount"
+        type="number"
+        name="deposit_amount"
+        class="form-control"
+        min="0"
+        step="0.01"
+        value="<%= form.deposit_amount || "" %>"
+      />
       <div class="form-text">Kosong = default dari Room Type.</div>
     </div>
 
     <div class="col-md-4">
-      <label class="form-label">Billing anchor day (optional)</label>
-      <input type="number" name="billing_anchor_day" class="form-control" min="1" max="31" value="<%= form.billing_anchor_day || "" %>" />
+      <label class="form-label">Billing anchor day [tanggal bayar] (optional)</label>
+      <input
+        id="billing_anchor_day"
+        type="number"
+        name="billing_anchor_day"
+        class="form-control"
+        min="1"
+        max="31"
+        placeholder="Input nilai hari 1-31"
+        value="<%= form.billing_anchor_day || "" %>"
+      />
+      <div class="form-text">
+        Kosong = ikut tanggal check-in. Jika tanggal tidak ada (mis. Feb), sistem pakai tanggal terakhir bulan.
+      </div>
     </div>
 
     <div class="col-md-4">
@@ -223,16 +246,7 @@
 
     <!-- Buttons -->
     <div class="col-12 d-flex gap-2">
-      <!-- Save triggers modal summary -->
-      <button
-        type="button"
-        id="btnSave"
-        class="btn btn-primary"
-        data-bs-toggle="modal"
-        data-bs-target="#confirmModal"
-      >
-        Save
-      </button>
+      <button type="button" id="btnSave" class="btn btn-primary">Save</button>
       <a class="btn btn-outline-secondary" href="/admin/kost/stays">Back</a>
     </div>
 
@@ -256,46 +270,16 @@
 
         <table class="table table-sm">
           <tbody>
-            <tr>
-              <th style="width: 220px;">Tenant</th>
-              <td id="sum_tenant">-</td>
-            </tr>
-            <tr>
-              <th>Room</th>
-              <td id="sum_room">-</td>
-            </tr>
-            <tr>
-              <th>Check-in</th>
-              <td id="sum_checkin">-</td>
-            </tr>
-            <tr>
-              <th>Rent period</th>
-              <td id="sum_period">-</td>
-            </tr>
-            <tr>
-              <th>Base rent</th>
-              <td id="sum_base">-</td>
-            </tr>
-            <tr>
-              <th>Additional rent</th>
-              <td id="sum_additional">-</td>
-            </tr>
-            <tr>
-              <th>Discount</th>
-              <td id="sum_discount">-</td>
-            </tr>
-            <tr>
-              <th><strong>Total contract</strong></th>
-              <td id="sum_total"><strong>-</strong></td>
-            </tr>
-            <tr>
-              <th>Additional reason</th>
-              <td id="sum_additional_reason">-</td>
-            </tr>
-            <tr>
-              <th>Discount reason</th>
-              <td id="sum_discount_reason">-</td>
-            </tr>
+            <tr><th style="width: 220px;">Tenant</th><td id="sum_tenant">-</td></tr>
+            <tr><th>Room</th><td id="sum_room">-</td></tr>
+            <tr><th>Check-in</th><td id="sum_checkin">-</td></tr>
+            <tr><th>Rent period</th><td id="sum_period">-</td></tr>
+            <tr><th>Base rent</th><td id="sum_base">-</td></tr>
+            <tr><th>Additional rent</th><td id="sum_additional">-</td></tr>
+            <tr><th>Discount</th><td id="sum_discount">-</td></tr>
+            <tr><th><strong>Total contract</strong></th><td id="sum_total"><strong>-</strong></td></tr>
+            <tr><th>Additional reason</th><td id="sum_additional_reason">-</td></tr>
+            <tr><th>Discount reason</th><td id="sum_discount_reason">-</td></tr>
           </tbody>
         </table>
       </div>
@@ -308,7 +292,5 @@
     </div>
   </div>
 </div>
-
-
 
 <%- include("../partials/footer") %>

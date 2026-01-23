@@ -3,3 +3,25 @@ a { color: #0366d6; text-decoration: none; }
 a:hover { text-decoration: underline; }
 table { border-collapse: collapse; }
 th, td { padding: 6px 10px; }
+
+/* =========================================================
+   Validation UX: no green check "surprise"
+   - Keep red invalid feedback after submit attempt
+   - Remove green valid check icons entirely
+========================================================= */
+
+/* Bootstrap shows green check via background-image on :valid.
+   We disable that so the form looks calm & clean. */
+.was-validated .form-control:valid,
+.was-validated .form-select:valid {
+  border-color: var(--bs-border-color);
+  padding-right: .75rem;
+  background-image: none !important;
+  box-shadow: none;
+}
+
+/* Keep invalid state (red) after submit attempt */
+.was-validated .form-control:invalid,
+.was-validated .form-select:invalid {
+  /* let bootstrap handle border color */
+}

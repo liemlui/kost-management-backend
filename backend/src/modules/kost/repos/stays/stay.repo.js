@@ -26,7 +26,11 @@ async function createStay(data) {
 
       data.base_rent_amount,
       data.additional_rent_amount ?? 0,
+      data.additional_rent_reason ?? null,
+
       data.discount_amount ?? 0,
+      data.discount_reason ?? null,
+
       data.agreed_rent_amount,
 
       data.deposit_amount,
@@ -37,7 +41,6 @@ async function createStay(data) {
     "kost.stays.createStay"
   );
 }
-
 
 /**
  * List stays with optional filters
