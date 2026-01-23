@@ -1,4 +1,4 @@
-<%- include('../partials/header', { title }) %>
+<%- include("../partials/header", { title }) %>
 
 <h1 class="h3 mb-3">Create Stay</h1>
 
@@ -8,11 +8,13 @@
   </div>
 <% } %>
 
-<form method="POST" action="/admin/kost/stays" class="card p-3">
+<form id="stayForm" method="POST" action="/admin/kost/stays" class="card p-3">
   <div class="row g-3">
+
+    <!-- Tenant -->
     <div class="col-md-6">
       <label class="form-label">Tenant</label>
-      <select name="tenant_id" class="form-select" required>
+      <select id="tenant_id" name="tenant_id" class="form-select" required>
         <option value="">-- Select tenant --</option>
         <% tenants.forEach(t => { %>
           <option value="<%= t.id %>" <%= String(form.tenant_id||"") === String(t.id) ? "selected" : "" %>>
@@ -22,81 +24,196 @@
       </select>
     </div>
 
+    <!-- Room -->
     <div class="col-md-6">
-      <label class="form-label">Room (available only)</label>
-      <select name="room_id" class="form-select" required>
+      <label class="form-label">Room (available)</label>
+      <select id="room_id" name="room_id" class="form-select" required>
         <option value="">-- Select room --</option>
         <% rooms.forEach(r => { %>
-          <option value="<%= r.id %>" <%= String(form.room_id||"") === String(r.id) ? "selected" : "" %>>
+          <option
+            value="<%= r.id %>"
+            data-room-code="<%= r.room_code %>"
+            data-room-type="<%= r.room_type_code %>"
+            data-base="<%= r.base_monthly_price %>"
+            data-deposit="<%= r.deposit_amount %>"
+            data-zone="<%= (r.position_zone || '').toUpperCase() %>"
+            <%= String(form.room_id||"") === String(r.id) ? "selected" : "" %>
+          >
             <%= r.room_code %> — <%= r.room_type_code %>
           </option>
         <% }) %>
       </select>
+      <div class="form-text">Only AVAILABLE rooms without ACTIVE stay.</div>
     </div>
 
+    <!-- Dates / Period -->
     <div class="col-md-4">
       <label class="form-label">Check-in date</label>
-      <input type="date" name="check_in_at" class="form-control" required value="<%= form.check_in_at || "" %>" />
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Planned check-out (optional)</label>
-      <input type="date" name="planned_check_out_at" class="form-control" value="<%= form.planned_check_out_at || "" %>" />
+<input
+  id="check_in_at"
+  type="date"
+  name="check_in_at"
+  class="form-control"
+  required
+  min="<%= todayISO %>"
+  value="<%= form.check_in_at || "" %>"
+/>
+      <div class="form-text">Tidak boleh tanggal lampau.</div>
     </div>
 
     <div class="col-md-4">
       <label class="form-label">Rent period</label>
-      <select name="rent_period" class="form-select" required>
+      <select id="rent_period" name="rent_period" class="form-select" required>
         <% ['DAILY','WEEKLY','BIWEEKLY','MONTHLY'].forEach(p => { %>
-          <option value="<%= p %>" <%= form.rent_period === p ? "selected" : "" %>><%= p %></option>
+          <option value="<%= p %>" <%= (form.rent_period || 'MONTHLY') === p ? "selected" : "" %>><%= p %></option>
         <% }) %>
       </select>
-      <div class="form-text">Jika MONTHLY, sistem akan set anchor day default dari tanggal check-in.</div>
     </div>
 
     <div class="col-md-4">
-      <label class="form-label">Agreed rent amount</label>
-      <input type="number" name="agreed_rent_amount" class="form-control" required min="0" step="0.01"
-             value="<%= form.agreed_rent_amount || "" %>" />
+      <label class="form-label">Planned check-out</label>
+      <input id="planned_checkout_preview" type="text" class="form-control" value="Auto calculated on save" readonly />
+      <div class="form-text">Final planned checkout dihitung server saat Save.</div>
     </div>
 
+    <hr class="my-2"/>
+
+    <!-- Pricing Preview -->
+    <div class="col-12">
+      <h5 class="mb-2">Contract Pricing (Preview)</h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Base rent (from Room Type)</label>
+          <div class="input-group">
+            <span class="input-group-text">Rp</span>
+            <input id="base_rent_preview" type="text" class="form-control" value="0" readonly />
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Additional rent (editable)</label>
+          <div class="input-group">
+            <span class="input-group-text">Rp</span>
+            <input
+              id="additional_rent_amount"
+              name="additional_rent_amount"
+              type="number"
+              class="form-control"
+              min="0"
+              step="0.01"
+              value="<%= form.additional_rent_amount || "" %>"
+            />
+          </div>
+          <div class="form-text">Ini angka kontrak fleksibel (hasil preset boleh diedit).</div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Discount (optional)</label>
+          <div class="input-group">
+            <span class="input-group-text">Rp</span>
+            <input
+              id="discount_amount"
+              name="discount_amount"
+              type="number"
+              class="form-control"
+              min="0"
+              step="0.01"
+              value="<%= form.discount_amount || "" %>"
+            />
+          </div>
+        </div>
+
+        <div class="col-md-8">
+          <label class="form-label">Additional rent reason (optional)</label>
+          <input
+            id="additional_rent_reason"
+            name="additional_rent_reason"
+            type="text"
+            class="form-control"
+            maxlength="200"
+            value="<%= form.additional_rent_reason || "" %>"
+          />
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Total contract (preview)</label>
+          <div class="input-group">
+            <span class="input-group-text">Rp</span>
+            <input id="total_rent_preview" type="text" class="form-control" value="0" readonly />
+          </div>
+          <div class="form-text">Total = base + additional - discount.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="col-12 mt-2">
+      <h6 class="mb-2">Preset helpers (optional)</h6>
+
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="preset_use_ac">
+            <label class="form-check-label" for="preset_use_ac">
+              Use AC (+300.000)
+            </label>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Zone override</label>
+          <select id="preset_zone" class="form-select">
+            <option value="AUTO">AUTO (use room zone)</option>
+            <option value="FRONT">FRONT (+150.000)</option>
+            <option value="MIDDLE">MIDDLE (+50.000)</option>
+            <option value="BACK">BACK (+0)</option>
+          </select>
+          <div class="form-text">AUTO membaca zone dari room.position_zone.</div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="preset_autofill" checked>
+            <label class="form-check-label" for="preset_autofill">
+              Auto-fill Additional from presets
+            </label>
+          </div>
+          <div class="form-text">Matikan kalau mau isi additional manual.</div>
+        </div>
+
+        <div class="col-md-3">
+          <button type="button" id="btn_apply_preset" class="btn btn-outline-secondary w-100">
+            Apply preset now
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-2 small text-muted">
+        Preset hanya membantu mengisi angka tambahan. Server tetap menghitung final kontrak saat Save.
+      </div>
+    </div>
+
+    <hr class="my-2"/>
+
+    <!-- Legacy / Optional -->
     <div class="col-md-4">
       <label class="form-label">Deposit amount (optional)</label>
-      <input type="number" name="deposit_amount" class="form-control" min="0" step="0.01"
-             value="<%= form.deposit_amount || "" %>" />
+      <input id="deposit_amount" type="number" name="deposit_amount" class="form-control" min="0" step="0.01" value="<%= form.deposit_amount || "" %>" />
+      <div class="form-text">Kosong = default dari Room Type.</div>
     </div>
 
     <div class="col-md-4">
-      <label class="form-label">Billing anchor day (MONTHLY only, optional)</label>
-      <input type="number" name="billing_anchor_day" class="form-control" min="1" max="31"
-             value="<%= form.billing_anchor_day || "" %>" />
+      <label class="form-label">Billing anchor day (optional)</label>
+      <input type="number" name="billing_anchor_day" class="form-control" min="1" max="31" value="<%= form.billing_anchor_day || "" %>" />
     </div>
 
     <div class="col-md-4">
-      <label class="form-label">Electricity mode</label>
+      <label class="form-label">Electricity mode (legacy)</label>
       <select name="electricity_mode" class="form-select">
-        <% ['METERED','INCLUDED','FIXED'].forEach(m => { %>
-          <option value="<%= m %>" <%= form.electricity_mode === m ? "selected" : "" %>><%= m %></option>
+        <% ['METERED','FIXED'].forEach(m => { %>
+          <option value="<%= m %>" <%= (form.electricity_mode || 'METERED') === m ? "selected" : "" %>><%= m %></option>
         <% }) %>
       </select>
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Electricity fixed amount (if FIXED)</label>
-      <input type="number" name="electricity_fixed_amount" class="form-control" min="0" step="0.01"
-             value="<%= form.electricity_fixed_amount || "" %>" />
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Water fixed amount (optional)</label>
-      <input type="number" name="water_fixed_amount" class="form-control" min="0" step="0.01"
-             value="<%= form.water_fixed_amount || "" %>" />
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Internet fixed amount (optional)</label>
-      <input type="number" name="internet_fixed_amount" class="form-control" min="0" step="0.01"
-             value="<%= form.internet_fixed_amount || "" %>" />
     </div>
 
     <div class="col-12">
@@ -104,11 +221,94 @@
       <textarea name="notes" class="form-control" rows="3"><%= form.notes || "" %></textarea>
     </div>
 
+    <!-- Buttons -->
     <div class="col-12 d-flex gap-2">
-      <button type="submit" class="btn btn-primary">Save</button>
+      <!-- Save triggers modal summary -->
+      <button
+        type="button"
+        id="btnSave"
+        class="btn btn-primary"
+        data-bs-toggle="modal"
+        data-bs-target="#confirmModal"
+      >
+        Save
+      </button>
       <a class="btn btn-outline-secondary" href="/admin/kost/stays">Back</a>
     </div>
+
   </div>
 </form>
 
-<%- include('../partials/footer') %>
+<!-- Confirm Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Stay (Summary)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-warning mb-3">
+          Periksa ringkasan kontrak. Klik <strong>Approve & Save</strong> untuk menyimpan ke database.
+        </div>
+
+        <table class="table table-sm">
+          <tbody>
+            <tr>
+              <th style="width: 220px;">Tenant</th>
+              <td id="sum_tenant">-</td>
+            </tr>
+            <tr>
+              <th>Room</th>
+              <td id="sum_room">-</td>
+            </tr>
+            <tr>
+              <th>Check-in</th>
+              <td id="sum_checkin">-</td>
+            </tr>
+            <tr>
+              <th>Rent period</th>
+              <td id="sum_period">-</td>
+            </tr>
+            <tr>
+              <th>Base rent</th>
+              <td id="sum_base">-</td>
+            </tr>
+            <tr>
+              <th>Additional rent</th>
+              <td id="sum_additional">-</td>
+            </tr>
+            <tr>
+              <th>Discount</th>
+              <td id="sum_discount">-</td>
+            </tr>
+            <tr>
+              <th><strong>Total contract</strong></th>
+              <td id="sum_total"><strong>-</strong></td>
+            </tr>
+            <tr>
+              <th>Additional reason</th>
+              <td id="sum_additional_reason">-</td>
+            </tr>
+            <tr>
+              <th>Discount reason</th>
+              <td id="sum_discount_reason">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="btnApprove" class="btn btn-success">Approve & Save</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+<%- include("../partials/footer") %>

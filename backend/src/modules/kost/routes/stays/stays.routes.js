@@ -4,13 +4,18 @@ const router = express.Router();
 
 const staysController = require("../../controllers/stays/stays.controller");
 
-// UI pages (render)
+// Pages (render)
 router.get("/", staysController.renderStaysList);
 router.get("/new", staysController.renderStayNewForm);
 router.get("/:id", staysController.renderStayDetail);
 
-// Actions (POST)
+// Actions
 router.post("/", staysController.createStay);
-router.post("/:id/checkout", staysController.endStay);
+
+// ✅ Preferred term: Checkout
+router.post("/:id/checkout", staysController.checkoutStay);
+
+// ✅ Backward-compatible alias (jaga-jaga masih ada link lama)
+router.post("/:id/end", staysController.endStay);
 
 module.exports = router;

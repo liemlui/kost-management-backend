@@ -1,91 +1,209 @@
 <%- include('../partials/header', { title }) %>
 
-<h1 class="h3 mb-3">Stays</h1>
+<%
+  function fmtDate(d) {
+    if (!d) return "-";
+    const s = String(d).slice(0, 10); // YYYY-MM-DD
+    const [y, m, day] = s.split("-").map(Number);
+    const months = [
+      "Januari","Februari","Maret","April","Mei","Juni",
+      "Juli","Agustus","September","Oktober","November","Desember"
+    ];
+    if (!y || !m || !day) return s;
+    return `${day} ${months[m - 1]} ${y}`;
+  }
 
-<div class="mb-3">
+  function fmtIDR(v) {
+    if (v === null || v === undefined || v === "") return "-";
+    const n = Number(v);
+    if (Number.isNaN(n)) return String(v);
+    return "Rp " + n.toLocaleString("id-ID");
+  }
+
+  // helper aman untuk field yang mungkin belum ada di query
+  function valOrDash(v) {
+    return (v === null || v === undefined || v === "") ? "-" : v;
+  }
+%>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Stays</h1>
   <a class="btn btn-primary" href="/admin/kost/stays/new">+ New Stay</a>
 </div>
-<form method="GET" action="/admin/kost/stays" class="row g-2 mb-3">
-  <div class="col-md-3">
+
+<form class="row g-2 align-items-center mb-3" method="GET" action="/admin/kost/stays">
+  <div class="col-auto">
     <select name="status" class="form-select">
-      <% const s = (filters && filters.status) ? filters.status : "ACTIVE"; %>
-      <option value="ACTIVE" <%= s==="ACTIVE"?"selected":"" %>>ACTIVE</option>
-      <option value="ENDED" <%= s==="ENDED"?"selected":"" %>>ENDED</option>
-      <option value="FORCED_ENDED" <%= s==="FORCED_ENDED"?"selected":"" %>>FORCED_ENDED</option>
-      <option value="ALL" <%= s==="ALL"?"selected":"" %>>ALL</option>
+      <option value="ACTIVE" <%= (filters?.status === 'ACTIVE') ? 'selected' : '' %>>ACTIVE</option>
+      <option value="ENDED" <%= (filters?.status === 'ENDED') ? 'selected' : '' %>>ENDED</option>
+      <option value="FORCED_ENDED" <%= (filters?.status === 'FORCED_ENDED') ? 'selected' : '' %>>FORCED_ENDED</option>
+      <option value="ALL" <%= (filters?.status === 'ALL') ? 'selected' : '' %>>ALL</option>
     </select>
   </div>
 
-  <div class="col-md-5">
-    <input
-      type="text"
-      name="q"
-      class="form-control"
-      placeholder="Search tenant / room..."
-      value="<%= (filters && filters.q) ? filters.q : "" %>"
-    />
+  <div class="col-auto">
+    <select name="year" class="form-select">
+      <% (years || []).forEach(y => { %>
+        <option value="<%= y %>" <%= (String(filters?.year) === String(y)) ? 'selected' : '' %>>
+          <%= y %>
+        </option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="limit" class="form-select">
+      <% [25,50,100,200].forEach(n => { %>
+        <option value="<%= n %>" <%= (String(filters?.limit) === String(n)) ? 'selected' : '' %>><%= n %></option>
+      <% }) %>
+    </select>
   </div>
 
-  <div class="col-md-4 d-flex gap-2">
-    <button class="btn btn-primary" type="submit">Filter</button>
+  <div class="col-auto">
+    <button class="btn btn-primary" type="submit">Apply</button>
     <a class="btn btn-outline-secondary" href="/admin/kost/stays">Reset</a>
-    <a class="btn btn-success ms-auto" href="/admin/kost/stays/new">+ New Stay</a>
   </div>
 </form>
 
 
-<table class="table table-bordered table-striped align-middle">
-  <thead>
-    <tr>
-      <th>Status</th>
-      <th>Tenant</th>
-      <th>Room</th>
-      <th>Check-in</th>
-      <th>Planned check-out</th>
-      <th>Check-out</th>
-      <th>Period</th>
-      <th>Agreed rent</th>
-      <th>Deposit</th>
-      <th style="width:160px;">Action</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% if (!stays || stays.length === 0) { %>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped align-middle">
+    <thead>
       <tr>
-        <td colspan="10" class="text-muted">No stays yet.</td>
-      </tr>
-    <% } %>
+        <th>Status</th>
+        <th>Tenant</th>
+        <th>Room</th>
+        <th>Check-in</th>
+        <th>Expected checkout</th>
+        <th>Checkout date</th>
+        <th>Period</th>
 
-    <% stays.forEach(s => { %>
-      <tr>
-        <td>
-          <span class="badge <%= s.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary' %>">
-            <%= s.status %>
-          </span>
-        </td>
-        <td><%= s.tenant_name %></td>
-        <td><%= s.room_code %></td>
-        <td><%= s.check_in_at ? String(s.check_in_at).slice(0,10) : "-" %></td>
-        <td><%= s.planned_check_out_at ? String(s.planned_check_out_at).slice(0,10) : "-" %></td>
-        <td><%= s.check_out_at ? String(s.check_out_at).slice(0,10) : "-" %></td>
-        <td><%= s.rent_period %></td>
-        <td><%= s.agreed_rent_amount ?? "-" %></td>
-        <td><%= s.deposit_amount ?? "-" %></td>
-        <td>
-          <a class="btn btn-sm btn-outline-secondary" href="/admin/kost/stays/<%= s.id %>">Detail</a>
+        <!-- Pricing summary (aman walau beberapa field belum ada di query) -->
+        <th class="text-end">Base rent</th>
+        <th class="text-end">Additional</th>
+        <th class="text-end">Agreed rent</th>
+        <th class="text-end">Deposit</th>
 
-          <% if (s.status === 'ACTIVE') { %>
-            <form method="POST"
-                  action="/admin/kost/stays/<%= s.id %>/checkout"
-                  style="display:inline;"
-                  onsubmit="return confirm('Checkout this stay?');">
-              <button class="btn btn-sm btn-outline-danger" type="submit">Checkout</button>
-            </form>
-          <% } %>
-        </td>
+        <th style="width:170px;">Action</th>
       </tr>
-    <% }) %>
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      <% if (!stays || stays.length === 0) { %>
+        <tr>
+          <td colspan="12" class="text-muted">No stays yet.</td>
+        </tr>
+      <% } %>
+
+      <% stays.forEach(st => { %>
+        <tr>
+          <td>
+            <span class="badge <%= st.status === 'ACTIVE' ? 'bg-success' : 'bg-secondary' %>">
+              <%= st.status %>
+            </span>
+          </td>
+
+          <td>
+            <a href="/admin/kost/tenants/<%= st.tenant_id %>" class="text-decoration-none">
+              <%= st.tenant_name %>
+            </a>
+          </td>
+          <td>
+            <a href="/admin/kost/rooms/<%= st.room_id %>" class="text-decoration-none">
+              <%= st.room_code %>
+            </a>
+          </td>
+
+          <td><%= fmtDate(st.check_in_at) %></td>
+          <td><%= fmtDate(st.planned_check_out_at) %></td>
+          <td><%= fmtDate(st.check_out_at) %></td>
+
+          <td><%= st.rent_period %></td>
+
+          <!-- Base rent: prefer room_type base_monthly_price kalau ada, fallback ke stay.base_rent_amount -->
+          <td class="text-end">
+            <%= fmtIDR(st.base_rent_amount ?? st.base_monthly_price) %>
+          </td>
+
+          <!-- Additional: kalau belum ada fieldnya, tampil "-" -->
+          <td class="text-end">
+            <%= fmtIDR(st.additional_rent_amount) %>
+          </td>
+
+          <td class="text-end"><%= fmtIDR(st.agreed_rent_amount) %></td>
+          <td class="text-end"><%= fmtIDR(st.deposit_amount) %></td>
+
+          <td>
+            <a class="btn btn-sm btn-outline-secondary" href="/admin/kost/stays/<%= st.id %>">Detail</a>
+
+            <% if (st.status === 'ACTIVE') { %>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-danger js-checkout-btn"
+                data-bs-toggle="modal"
+                data-bs-target="#checkoutConfirmModal"
+                data-stay-id="<%= st.id %>"
+                data-tenant="<%= st.tenant_name %>"
+                data-room="<%= st.room_code %>"
+              >
+                Checkout
+              </button>
+            <% } %>
+          </td>
+
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%
+  const page = Number(filters?.page || 1);
+  const limit = Number(filters?.limit || 50);
+    const totalRows = Number(pagination?.totalRows || 0);
+  const totalPages = Number(pagination?.totalPages || 1);
+
+  // Next button: tampilkan kalau rows == limit (indikasi masih ada halaman berikutnya)
+  const hasNext = (stays && stays.length === limit);
+
+  const qsBase = `status=${encodeURIComponent(filters?.status || 'ALL')}&year=${encodeURIComponent(filters?.year || '')}&limit=${encodeURIComponent(limit)}`;
+  const prevHref = `/admin/kost/stays?${qsBase}&page=${Math.max(1, page - 1)}`;
+  const nextHref = `/admin/kost/stays?${qsBase}&page=${Math.min(totalPages, page + 1)}`;
+%>
+
+<div class="d-flex justify-content-between align-items-center mt-3">
+  <div class="text-muted small">
+    Total <%= totalRows %> rows • Page <%= page %> of <%= totalPages %>
+  </div>
+
+  <div class="btn-group">
+    <a class="btn btn-outline-secondary <%= page <= 1 ? 'disabled' : '' %>" href="<%= prevHref %>">Prev</a>
+    <a class="btn btn-outline-secondary <%= page >= totalPages ? 'disabled' : '' %>" href="<%= nextHref %>">Next</a>
+  </div>
+</div>
+
+
+<div class="modal fade" id="checkoutConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Checkout</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <p class="mb-2">Checkout cannot be undone.</p>
+        <div class="small text-muted" id="checkoutSummary">-</div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+
+        <form id="checkoutForm" method="POST" action="">
+          <button type="submit" class="btn btn-danger">Yes, Checkout</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/js/kost/stays-index.js" defer></script>
 
 <%- include('../partials/footer') %>

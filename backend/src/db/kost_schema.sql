@@ -2358,6 +2358,119 @@ ALTER TABLE ONLY kost.tickets
 ALTER TABLE ONLY kost.tickets
     ADD CONSTRAINT tickets_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES kost.tenants(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
+-- 2026-01-22__stays_contract_pricing_snapshot.sql
+
+ALTER TABLE kost.stays
+  ADD COLUMN IF NOT EXISTS base_rent_amount numeric(14,2),
+  ADD COLUMN IF NOT EXISTS discount_amount numeric(14,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS discount_reason text;
+
+-- Backfill untuk data lama:
+UPDATE kost.stays
+SET base_rent_amount = agreed_rent_amount
+WHERE base_rent_amount IS NULL;
+
+-- Jadikan NOT NULL setelah backfill
+ALTER TABLE kost.stays
+  ALTER COLUMN base_rent_amount SET NOT NULL;
+
+-- Optional tapi sangat bagus untuk audit:
+ALTER TABLE kost.stays
+  ADD CONSTRAINT chk_stays_discount_nonnegative CHECK (discount_amount >= 0),
+  ADD CONSTRAINT chk_stays_discount_reason_required
+    CHECK (discount_amount = 0 OR discount_reason IS NOT NULL),
+  ADD CONSTRAINT chk_stays_contract_amounts_consistent
+    CHECK (agreed_rent_amount = (base_rent_amount - discount_amount));
+-- Add pricing snapshot fields into kost.stays (safe, minimal)
+ALTER TABLE kost.stays
+  ADD COLUMN IF NOT EXISTS base_rent_amount numeric(14,2),
+  ADD COLUMN IF NOT EXISTS discount_amount numeric(14,2),
+  ADD COLUMN IF NOT EXISTS discount_reason text;
+
+-- Backfill for existing rows (if any)
+UPDATE kost.stays
+SET
+  base_rent_amount = COALESCE(base_rent_amount, agreed_rent_amount),
+  discount_amount = COALESCE(discount_amount, 0)
+WHERE base_rent_amount IS NULL OR discount_amount IS NULL;
+
+-- Enforce NOT NULL after backfill
+ALTER TABLE kost.stays
+  ALTER COLUMN base_rent_amount SET NOT NULL,
+  ALTER COLUMN discount_amount SET NOT NULL;
+
+-- Default for discount
+ALTER TABLE kost.stays
+  ALTER COLUMN discount_amount SET DEFAULT 0;
+
+-- Optional: protect single ACTIVE stay per room (if you don't have it yet)
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_stays_active_room
+ON kost.stays(room_id)
+WHERE status = 'ACTIVE';
+
+-- 20260123_01_add_stays_additional_rent.sql
+-- Add flexible contract fields to kost.stays
+-- Safe to run multiple times.
+
+BEGIN;
+
+-- 1) additional rent fields
+ALTER TABLE kost.stays
+  ADD COLUMN IF NOT EXISTS additional_rent_amount NUMERIC(14,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE kost.stays
+  ADD COLUMN IF NOT EXISTS additional_rent_reason TEXT;
+
+-- 2) ensure snapshot + agreed fields exist (in case schema belum punya)
+ALTER TABLE kost.stays
+  ADD COLUMN IF NOT EXISTS base_rent_amount NUMERIC(14,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE kost.stays
+  ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(14,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE kost.stays
+  ADD COLUMN IF NOT EXISTS discount_reason TEXT;
+
+ALTER TABLE kost.stays
+  ADD COLUMN IF NOT EXISTS agreed_rent_amount NUMERIC(14,2) NOT NULL DEFAULT 0;
+
+-- 3) optional: prevent negative numbers (light guard)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'chk_stays_amounts_non_negative'
+      AND conrelid = 'kost.stays'::regclass
+  ) THEN
+    ALTER TABLE kost.stays
+      ADD CONSTRAINT chk_stays_amounts_non_negative
+      CHECK (
+        base_rent_amount >= 0
+        AND additional_rent_amount >= 0
+        AND discount_amount >= 0
+        AND agreed_rent_amount >= 0
+      );
+  END IF;
+END $$;
+
+COMMIT;
+ALTER TABLE kost.stays
+  DROP CONSTRAINT IF EXISTS chk_stays_contract_amounts_consistent;
+
+ALTER TABLE kost.stays
+  ADD CONSTRAINT chk_stays_contract_amounts_consistent
+  CHECK (
+    agreed_rent_amount =
+      ( base_rent_amount
+        + COALESCE(additional_rent_amount, 0)
+        - COALESCE(discount_amount, 0)
+      )
+  );
+
+CREATE INDEX IF NOT EXISTS idx_stays_checkin ON kost.stays (check_in_at DESC);
+CREATE INDEX IF NOT EXISTS idx_stays_status_checkin ON kost.stays (status, check_in_at DESC);
+
 
 --
 -- PostgreSQL database dump complete
