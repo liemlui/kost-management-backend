@@ -10,7 +10,17 @@
     return "Rp " + String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   }
   function dateOnly(v) {
-    return v ? String(v).slice(0, 10) : "-";
+    if (!v) return "-";
+    const d = new Date(v);
+    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" }); // YYYY-MM-DD
+  }
+    function anchorDay(stay) {
+    if (stay.billing_anchor_day !== null && stay.billing_anchor_day !== undefined && stay.billing_anchor_day !== "") {
+      return stay.billing_anchor_day;
+    }
+    if (!stay.check_in_at) return "-";
+    const d = new Date(stay.check_in_at);
+    return Number(d.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta", day: "2-digit" }));
   }
 %>
 
@@ -72,7 +82,7 @@
       <div class="mb-2"><strong>Planned check-out:</strong> <%= dateOnly(stay.planned_check_out_at) %></div>
       <div class="mb-2"><strong>Check-out:</strong> <%= dateOnly(stay.check_out_at) %></div>
       <div class="mb-2"><strong>Physical check-out:</strong> <%= dateOnly(stay.physical_check_out_at) %></div>
-      <div class="mb-2"><strong>Billing anchor day:</strong> <%= stay.billing_anchor_day ?? "-" %></div>
+      <div class="mb-2"><strong>Billing anchor day:</strong> <%= anchorDay(stay)  %></div>
 
       <hr/>
 
@@ -105,6 +115,17 @@
       <button class="btn btn-danger" type="submit">Checkout</button>
     </form>
   <% } %>
+  <% if (!stay.physical_check_out_at) { %>
+  <form
+    method="POST"
+    action="/admin/kost/stays/<%= stay.id %>/physical-checkout"
+    onsubmit="return confirm('Mark physical check-out (tenant has moved out and returned key)?');"
+  >
+    <button class="btn btn-outline-primary" type="submit">Mark Physical Check-out</button>
+  </form>
+<% } %>
 </div>
+
+
 
 <%- include('../partials/footer') %>

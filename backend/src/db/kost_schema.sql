@@ -2471,6 +2471,12 @@ ALTER TABLE kost.stays
 CREATE INDEX IF NOT EXISTS idx_stays_checkin ON kost.stays (check_in_at DESC);
 CREATE INDEX IF NOT EXISTS idx_stays_status_checkin ON kost.stays (status, check_in_at DESC);
 
+ALTER TABLE kost.stays
+  ADD COLUMN IF NOT EXISTS room_variant TEXT NOT NULL DEFAULT 'FAN';
+
+ALTER TABLE kost.stays
+  ADD CONSTRAINT chk_stays_room_variant
+  CHECK (room_variant IN ('FAN','AC'));
 
 --
 -- PostgreSQL database dump complete

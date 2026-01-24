@@ -8,28 +8,98 @@
   </div>
 <% } %>
 
+<%
+  // -------------------------
+  // Progressive state helpers
+  // -------------------------
+  const formData = form || {};
+  const hasTenant   = String(formData.tenant_id || "").trim().length > 0;
+  const hasRoom     = String(formData.room_id || "").trim().length > 0;
+  const hasCheckIn  = String(formData.check_in_at || "").trim().length > 0;
+
+  // Rent period selection (backward compat BIWEEKLY -> TWO_WEEKS)
+  const rpRaw = (formData.rent_period || "");
+  const rentPeriod = (rpRaw === "BIWEEKLY") ? "TWO_WEEKS" : rpRaw;
+
+  const hasRentPeriod = String(rentPeriod || "").trim().length > 0;
+
+  // Room variant (we keep it in the form for pricing logic; backend can adopt later)
+  const roomVariant = (formData.room_variant || "FAN"); // FAN/AC
+  const hasVariant = ["FAN", "AC"].includes(String(roomVariant));
+
+  // Snapshot defaults
+  const DEFAULT_TARIFF = 2500;
+  const DEFAULT_WATER  = 5000;
+
+  const tariffValue = (String(formData.electricity_fixed_amount || "").trim().length > 0)
+    ? formData.electricity_fixed_amount
+    : DEFAULT_TARIFF;
+
+  const waterValue = (String(formData.water_fixed_amount || "").trim().length > 0)
+    ? formData.water_fixed_amount
+    : DEFAULT_WATER;
+
+  // Override flags (best-effort restore on server-side render)
+  // If user typed a custom value and it differs from default, we treat it as override ON.
+  const tariffIsOverride = Number(tariffValue) !== DEFAULT_TARIFF;
+  const waterIsOverride  = Number(waterValue)  !== DEFAULT_WATER;
+
+  // Electricity mode derived later (JS will also enforce)
+  const derivedElecMode = (rentPeriod === "MONTHLY") ? "METERED" : (hasRentPeriod ? "INCLUDED" : "METERED");
+
+  // Pricing section should only appear after steps 1–8 valid.
+  // Step 1–3: tenant+room+checkin
+  // Step 6: rent_period
+  // Step 8: room_variant
+  const canShowPricing = hasTenant && hasRoom && hasCheckIn && hasRentPeriod && hasVariant;
+
+  // Toggle for additional / discount (restore on render)
+  const additionalAmt = Number(formData.additional_rent_amount || 0);
+  const discountAmt   = Number(formData.discount_amount || 0);
+  const addChecked    = additionalAmt > 0 || String(formData.additional_rent_reason || "").trim().length > 0;
+  const discChecked   = discountAmt > 0 || String(formData.discount_reason || "").trim().length > 0;
+%>
+
 <form id="stayForm" method="POST" action="/admin/kost/stays" class="card p-3 needs-validation" novalidate>
   <div class="row g-3">
 
-    <!-- Tenant -->
+    <!-- =========================================================
+         Step 1 — Tenant
+         ========================================================= -->
     <div class="col-md-6">
       <label class="form-label">Tenant</label>
-      <select id="tenant_id" name="tenant_id" class="form-select" required>
+      <select
+        id="tenant_id"
+        name="tenant_id"
+        class="form-select"
+        required
+        data-step="1"
+      >
         <option value="">-- Select tenant --</option>
-        <% tenants.forEach(t => { %>
-          <option value="<%= t.id %>" <%= String(form.tenant_id||"") === String(t.id) ? "selected" : "" %>>
+        <% (tenants || []).forEach(t => { %>
+          <option value="<%= t.id %>" <%= String(formData.tenant_id || "") === String(t.id) ? "selected" : "" %>>
             <%= t.full_name %>
           </option>
         <% }) %>
       </select>
+      <div class="invalid-feedback">Tenant wajib dipilih.</div>
     </div>
 
-    <!-- Room -->
+    <!-- =========================================================
+         Step 2 — Room (Available) (disabled until tenant chosen)
+         ========================================================= -->
     <div class="col-md-6">
       <label class="form-label">Room (available)</label>
-      <select id="room_id" name="room_id" class="form-select" required>
+      <select
+        id="room_id"
+        name="room_id"
+        class="form-select"
+        required
+        data-step="2"
+        <%= hasTenant ? "" : "disabled" %>
+      >
         <option value="">-- Select room --</option>
-        <% rooms.forEach(r => { %>
+        <% (rooms || []).forEach(r => { %>
           <option
             value="<%= r.id %>"
             data-room-code="<%= r.room_code %>"
@@ -37,16 +107,19 @@
             data-base="<%= r.base_monthly_price %>"
             data-deposit="<%= r.deposit_amount %>"
             data-zone="<%= (r.position_zone || '').toUpperCase() %>"
-            <%= String(form.room_id||"") === String(r.id) ? "selected" : "" %>
+            <%= String(formData.room_id || "") === String(r.id) ? "selected" : "" %>
           >
             <%= r.room_code %> — <%= r.room_type_code %>
           </option>
         <% }) %>
       </select>
       <div class="form-text">Only AVAILABLE rooms without ACTIVE stay.</div>
+      <div class="invalid-feedback">Room wajib dipilih.</div>
     </div>
 
-    <!-- Dates / Period -->
+    <!-- =========================================================
+         Step 3 — Check-in Date (disabled until room chosen)
+         ========================================================= -->
     <div class="col-md-4">
       <label class="form-label">Check-in date</label>
       <input
@@ -56,92 +129,298 @@
         class="form-control"
         required
         min="<%= todayISO %>"
-        value="<%= form.check_in_at || "" %>"
+        value="<%= formData.check_in_at || "" %>"
+        data-step="3"
+        <%= hasRoom ? "" : "disabled" %>
       />
       <div class="form-text">Tidak boleh tanggal lampau.</div>
+      <div class="invalid-feedback">Tanggal check-in wajib diisi.</div>
     </div>
 
-    <div class="col-md-4">
+    <!-- =========================================================
+         Step 4 — Tariff per kWh (Snapshot)
+         ========================================================= -->
+    <div class="col-md-4" id="tariffSection" data-step="4" style="<%= hasCheckIn ? '' : 'display:none;' %>">
+      <label class="form-label">Tariff per kWh (snapshot)</label>
+
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="form-text mb-0">Default: Rp <span id="tariffDefaultText"><%= DEFAULT_TARIFF %></span></div>
+
+        <div class="form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="override_tariff"
+            name="override_tariff"
+            value="1"
+            <%= tariffIsOverride ? "checked" : "" %>
+          >
+          <label class="form-check-label" for="override_tariff">Override tariff</label>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <span class="input-group-text">Rp</span>
+        <input
+          id="electricity_fixed_amount"
+          type="number"
+          name="electricity_fixed_amount"
+          class="form-control"
+          min="0"
+          step="1"
+          value="<%= tariffValue %>"
+          <%= tariffIsOverride ? "" : "readonly" %>
+        />
+      </div>
+
+      <div class="form-text">
+        Dipakai untuk rumus base (WEEKLY/TWO_WEEKS embedded). Untuk MONTHLY+AC dipakai sebagai komponen base (tariff * 120).
+      </div>
+      <div class="invalid-feedback">Tariff wajib valid (khususnya jika AC dipilih).</div>
+    </div>
+
+    <!-- =========================================================
+         Step 5 — Water fixed amount (Snapshot)
+         ========================================================= -->
+    <div class="col-md-4" id="waterSection" data-step="5" style="<%= hasCheckIn ? '' : 'display:none;' %>">
+      <label class="form-label">Water fixed amount (per m³) (snapshot)</label>
+
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="form-text mb-0">Default: Rp <span id="waterDefaultText"><%= DEFAULT_WATER %></span></div>
+
+        <div class="form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            id="override_water"
+            name="override_water"
+            value="1"
+            <%= waterIsOverride ? "checked" : "" %>
+          >
+          <label class="form-check-label" for="override_water">Override water</label>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <span class="input-group-text">Rp</span>
+        <input
+          id="water_fixed_amount"
+          type="number"
+          name="water_fixed_amount"
+          class="form-control"
+          min="0"
+          step="1"
+          value="<%= waterValue %>"
+          <%= waterIsOverride ? "" : "readonly" %>
+        />
+      </div>
+
+      <div class="form-text">Tidak dihitung di total kontrak; hanya snapshot untuk invoice rutin.</div>
+    </div>
+
+    <!-- =========================================================
+         Step 6 — Rent period
+         ========================================================= -->
+    <div class="col-md-4" id="rentPeriodSection" data-step="6" style="<%= hasCheckIn ? '' : 'display:none;' %>">
       <label class="form-label">Rent period</label>
-      <select id="rent_period" name="rent_period" class="form-select" required>
-        <% ['DAILY','WEEKLY','BIWEEKLY','MONTHLY'].forEach(p => { %>
-          <option value="<%= p %>" <%= (form.rent_period || 'MONTHLY') === p ? "selected" : "" %>><%= p %></option>
+
+      <select
+        id="rent_period"
+        name="rent_period"
+        class="form-select"
+        required
+      >
+        <option value="">-- Select period --</option>
+        <% ['DAILY','WEEKLY','TWO_WEEKS','MONTHLY'].forEach(p => { %>
+          <option value="<%= p %>" <%= String(rentPeriod) === p ? "selected" : "" %>><%= p %></option>
         <% }) %>
       </select>
+
+      <div class="invalid-feedback">Rent period wajib dipilih.</div>
+    </div>
+
+    <!-- =========================================================
+         Step 7 — Electricity mode (Auto, read-only)
+         ========================================================= -->
+    <div class="col-md-4" id="elecModeSection" data-step="7" style="<%= hasRentPeriod ? '' : 'display:none;' %>">
+      <label class="form-label">Electricity mode (auto)</label>
+
+      <select id="electricity_mode_display" class="form-select" disabled>
+        <option value="METERED"  <%= derivedElecMode === "METERED" ? "selected" : "" %>>METERED</option>
+        <option value="INCLUDED" <%= derivedElecMode === "INCLUDED" ? "selected" : "" %>>INCLUDED</option>
+      </select>
+
+      <input
+        type="hidden"
+        id="electricity_mode"
+        name="electricity_mode"
+        value="<%= formData.electricity_mode || derivedElecMode %>"
+      />
+
+      <div class="form-text">
+        MONTHLY → METERED. DAILY/WEEKLY/TWO_WEEKS → INCLUDED (listrik embedded di base rent).
+      </div>
+    </div>
+
+    <!-- =========================================================
+         Step 8 — Room Variant (FAN/AC)
+         ========================================================= -->
+    <div class="col-md-4" id="variantSection" data-step="8" style="<%= hasRentPeriod ? '' : 'display:none;' %>">
+      <label class="form-label d-block">Room variant</label>
+
+      <div class="d-flex gap-3">
+        <div class="form-check">
+          <input
+            class="form-check-input"
+            type="radio"
+            name="room_variant"
+            id="room_variant_fan"
+            value="FAN"
+            <%= roomVariant === "FAN" ? "checked" : "" %>
+          >
+          <label class="form-check-label" for="room_variant_fan">FAN</label>
+        </div>
+
+        <div class="form-check">
+          <input
+            class="form-check-input"
+            type="radio"
+            name="room_variant"
+            id="room_variant_ac"
+            value="AC"
+            <%= roomVariant === "AC" ? "checked" : "" %>
+          >
+          <label class="form-check-label" for="room_variant_ac">AC</label>
+        </div>
+      </div>
+
+      <div class="form-text">
+        Wajib sebelum pricing preview dihitung. MONTHLY+AC menggunakan komponen tariff. WEEKLY/TWO_WEEKS beda faktor.
+      </div>
     </div>
 
     <hr class="my-2"/>
 
-    <!-- Pricing Preview -->
-    <div class="col-12">
+    <!-- =========================================================
+         Step 9 — Contract Pricing Preview
+         ========================================================= -->
+    <div class="col-12" id="pricingSection" data-step="9" style="<%= canShowPricing ? '' : 'display:none;' %>">
       <h5 class="mb-2">Contract Pricing (Preview)</h5>
+
       <div class="row g-3">
 
         <div class="col-md-4">
-          <label class="form-label">Base rent (from Room Type)</label>
+          <label class="form-label">Base rent (computed)</label>
           <div class="input-group">
             <span class="input-group-text">Rp</span>
             <input id="base_rent_preview" type="text" class="form-control" value="0" readonly />
           </div>
+          <div class="form-text">
+            Preview muncul setelah Tenant, Room, Check-in, Tariff/Water snapshot, Rent period, Electricity mode, dan Variant valid.
+          </div>
         </div>
 
+        <!-- Additional toggle -->
         <div class="col-md-4">
-          <label class="form-label">Additional rent (editable)</label>
-          <div class="input-group">
-            <span class="input-group-text">Rp</span>
+          <label class="form-label d-block">Additional rent</label>
+
+          <div class="form-check mb-2">
             <input
-              id="additional_rent_amount"
-              name="additional_rent_amount"
-              type="number"
-              class="form-control"
-              min="0"
-              step="0.01"
-              value="<%= form.additional_rent_amount || "" %>"
-            />
+              class="form-check-input"
+              type="checkbox"
+              id="add_toggle"
+              name="add_toggle"
+              value="1"
+              <%= addChecked ? "checked" : "" %>
+            >
+            <label class="form-check-label" for="add_toggle">Add additional?</label>
           </div>
-          <div class="form-text">Ini angka kontrak fleksibel (hasil preset boleh diedit).</div>
+
+          <div id="additionalFields" style="<%= addChecked ? '' : 'display:none;' %>">
+            <div class="input-group">
+              <span class="input-group-text">Rp</span>
+              <input
+                id="additional_rent_amount"
+                name="additional_rent_amount"
+                type="number"
+                class="form-control"
+                min="0"
+                step="1"
+                value="<%= formData.additional_rent_amount || "" %>"
+                <%= addChecked ? "" : "disabled" %>
+              />
+            </div>
+            <div class="mt-2">
+              <label class="form-label">Reason</label>
+              <input
+                id="additional_rent_reason"
+                name="additional_rent_reason"
+                type="text"
+                class="form-control"
+                maxlength="200"
+                value="<%= formData.additional_rent_reason || "" %>"
+                <%= addChecked ? "" : "disabled" %>
+              />
+            </div>
+            <div class="form-text">Reason mengikuti checkbox.</div>
+          </div>
         </div>
 
+        <!-- Discount toggle -->
         <div class="col-md-4">
-          <label class="form-label">Discount (optional)</label>
-          <div class="input-group">
-            <span class="input-group-text">Rp</span>
+          <label class="form-label d-block">Discount</label>
+
+          <div class="form-check mb-2">
             <input
-              id="discount_amount"
-              name="discount_amount"
-              type="number"
-              class="form-control"
-              min="0"
-              step="0.01"
-              value="<%= form.discount_amount || "" %>"
-            />
+              class="form-check-input"
+              type="checkbox"
+              id="discount_toggle"
+              name="discount_toggle"
+              value="1"
+              <%= discChecked ? "checked" : "" %>
+            >
+            <label class="form-check-label" for="discount_toggle">Give discount?</label>
           </div>
 
-          <div class="mt-2">
-            <label class="form-label">Discount reason (optional)</label>
-            <input
-              id="discount_reason"
-              name="discount_reason"
-              type="text"
-              class="form-control"
-              maxlength="200"
-              value="<%= form.discount_reason || "" %>"
-            />
-            <div class="form-text">Wajib diisi jika discount > 0.</div>
+          <div id="discountFields" style="<%= discChecked ? '' : 'display:none;' %>">
+            <div class="input-group">
+              <span class="input-group-text">Rp</span>
+              <input
+                id="discount_amount"
+                name="discount_amount"
+                type="number"
+                class="form-control"
+                min="0"
+                step="1"
+                value="<%= formData.discount_amount || "" %>"
+                <%= discChecked ? "" : "disabled" %>
+              />
+            </div>
+
+            <div class="mt-2">
+              <label class="form-label">Discount reason</label>
+              <input
+                id="discount_reason"
+                name="discount_reason"
+                type="text"
+                class="form-control"
+                maxlength="200"
+                value="<%= formData.discount_reason || "" %>"
+                <%= discChecked ? "" : "disabled" %>
+              />
+              <div class="form-text">Wajib diisi jika discount > 0.</div>
+            </div>
           </div>
         </div>
 
-        <div class="col-md-8">
-          <label class="form-label">Additional rent reason (optional)</label>
-          <input
-            id="additional_rent_reason"
-            name="additional_rent_reason"
-            type="text"
-            class="form-control"
-            maxlength="200"
-            value="<%= form.additional_rent_reason || "" %>"
-          />
-        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         Step 10 — Total + Notes + Save
+         ========================================================= -->
+    <div class="col-12" id="totalSection" data-step="10" style="<%= canShowPricing ? '' : 'display:none;' %>">
+      <div class="row g-3">
 
         <div class="col-md-4">
           <label class="form-label">Total contract (preview)</label>
@@ -152,96 +431,70 @@
           <div class="form-text">Total = base + additional - discount.</div>
         </div>
 
-      </div>
-    </div>
+        <!-- Keep deposit + anchor day here (optional, not part of progressive pricing keys) -->
+        <div class="col-md-4">
+          <label class="form-label">Deposit amount (snapshot)</label>
 
-    <!-- Presets -->
-    <div class="col-12 mt-2">
-      <h6 class="mb-2">Preset helpers (optional)</h6>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="form-text mb-0">
+              Default: Rp <span id="depositDefaultText">-</span>
+            </div>
 
-      <div class="d-flex align-items-center gap-2 mb-2">
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="preset_autofill" checked>
-          <label class="form-check-label" for="preset_autofill">
-            Auto-fill additional dari preset
-          </label>
-        </div>
-        <span id="preset_mode_badge" class="badge text-bg-secondary">AUTO</span>
-      </div>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="override_deposit"
+                name="override_deposit"
+                value="1"
+              >
+              <label class="form-check-label" for="override_deposit">Override deposit</label>
+            </div>
+          </div>
 
-      <div class="row g-3 align-items-end">
-        <div class="col-md-6">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="preset_use_ac">
-            <label class="form-check-label" for="preset_use_ac">
-              Use AC (+300.000)
-            </label>
+          <div class="input-group">
+            <span class="input-group-text">Rp</span>
+            <input
+              id="deposit_amount"
+              type="number"
+              name="deposit_amount"
+              class="form-control"
+              min="0"
+              step="1"
+              value="<%= formData.deposit_amount || "" %>"
+              readonly
+            />
+          </div>
+
+          <div class="form-text">
+            Deposit snapshot saat Create Stay. Default diambil dari Room Type.
           </div>
         </div>
 
-        <div class="col-md-6">
-          <label class="form-label">Zone override</label>
-          <select id="preset_zone" class="form-select">
-            <option value="AUTO">AUTO (use room zone)</option>
-            <option value="FRONT">FRONT (+150.000)</option>
-            <option value="MIDDLE">MIDDLE (+50.000)</option>
-            <option value="BACK">BACK (+0)</option>
-          </select>
-          <div class="form-text">AUTO membaca zone dari room.position_zone.</div>
+
+        <div class="col-md-4">
+          <label class="form-label">Billing anchor day [tanggal bayar] (optional)</label>
+          <input
+            id="billing_anchor_day"
+            type="number"
+            name="billing_anchor_day"
+            class="form-control"
+            min="1"
+            max="31"
+            placeholder="Input nilai hari 1-31"
+            value="<%= formData.billing_anchor_day || "" %>"
+          />
+          <div class="form-text">
+            Kosong = ikut tanggal check-in. Jika tanggal tidak ada (mis. Feb), sistem pakai tanggal terakhir bulan.
+          </div>
         </div>
+
+        <div class="col-12">
+          <label class="form-label">Notes (optional)</label>
+          <textarea name="notes" class="form-control" rows="3"><%= formData.notes || "" %></textarea>
+        </div>
+
       </div>
-
-      <div class="mt-2 small text-muted">
-        Preset hanya membantu mengisi angka tambahan. Server tetap menghitung final kontrak saat Save.
-      </div>
-    </div>
-
-    <hr class="my-2"/>
-
-    <!-- Legacy / Optional -->
-    <div class="col-md-4">
-      <label class="form-label">Deposit amount (optional)</label>
-      <input
-        id="deposit_amount"
-        type="number"
-        name="deposit_amount"
-        class="form-control"
-        min="0"
-        step="0.01"
-        value="<%= form.deposit_amount || "" %>"
-      />
-      <div class="form-text">Kosong = default dari Room Type.</div>
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Billing anchor day [tanggal bayar] (optional)</label>
-      <input
-        id="billing_anchor_day"
-        type="number"
-        name="billing_anchor_day"
-        class="form-control"
-        min="1"
-        max="31"
-        placeholder="Input nilai hari 1-31"
-        value="<%= form.billing_anchor_day || "" %>"
-      />
-      <div class="form-text">
-        Kosong = ikut tanggal check-in. Jika tanggal tidak ada (mis. Feb), sistem pakai tanggal terakhir bulan.
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <label class="form-label">Electricity mode (legacy)</label>
-      <select name="electricity_mode" class="form-select">
-        <% ['METERED','FIXED'].forEach(m => { %>
-          <option value="<%= m %>" <%= (form.electricity_mode || 'METERED') === m ? "selected" : "" %>><%= m %></option>
-        <% }) %>
-      </select>
-    </div>
-
-    <div class="col-12">
-      <label class="form-label">Notes (optional)</label>
-      <textarea name="notes" class="form-control" rows="3"><%= form.notes || "" %></textarea>
     </div>
 
     <!-- Buttons -->
@@ -274,10 +527,17 @@
             <tr><th>Room</th><td id="sum_room">-</td></tr>
             <tr><th>Check-in</th><td id="sum_checkin">-</td></tr>
             <tr><th>Rent period</th><td id="sum_period">-</td></tr>
+            <tr><th>Room variant</th><td id="sum_variant">-</td></tr>
+
             <tr><th>Base rent</th><td id="sum_base">-</td></tr>
             <tr><th>Additional rent</th><td id="sum_additional">-</td></tr>
             <tr><th>Discount</th><td id="sum_discount">-</td></tr>
             <tr><th><strong>Total contract</strong></th><td id="sum_total"><strong>-</strong></td></tr>
+
+            <tr><th>Tariff/kWh</th><td id="sum_tariff">-</td></tr>
+            <tr><th>Water fixed</th><td id="sum_water">-</td></tr>
+            <tr><th>Electricity mode</th><td id="sum_elec_mode">-</td></tr>
+
             <tr><th>Additional reason</th><td id="sum_additional_reason">-</td></tr>
             <tr><th>Discount reason</th><td id="sum_discount_reason">-</td></tr>
           </tbody>
@@ -292,5 +552,7 @@
     </div>
   </div>
 </div>
+
+<script src="/js/kost/stays-new.js" defer></script>
 
 <%- include("../partials/footer") %>

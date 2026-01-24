@@ -17,13 +17,16 @@ async function createStay(data) {
   return query(
     sql.createStay,
     [
+      // identity
       data.tenant_id,
       data.room_id,
       data.check_in_at,
       data.rent_period,
+      data.room_variant,
       data.billing_anchor_day,
       data.planned_check_out_at,
 
+      // pricing snapshot
       data.base_rent_amount,
       data.additional_rent_amount ?? 0,
       data.additional_rent_reason ?? null,
@@ -33,9 +36,15 @@ async function createStay(data) {
 
       data.agreed_rent_amount,
 
+      // fixed snapshots
       data.deposit_amount,
       data.electricity_mode,
-      data.notes,
+      data.electricity_fixed_amount ?? 0,
+      data.water_fixed_amount ?? 0,
+      data.internet_fixed_amount ?? 0,
+
+      // misc
+      data.notes ?? null,
       data.created_by,
     ],
     "kost.stays.createStay"
@@ -46,8 +55,9 @@ async function createStay(data) {
  * List stays with optional filters
  */
 async function listStaysFiltered(filters = {}) {
-   const limit = Number.isFinite(Number(filters.limit)) ? Number(filters.limit) : 50;
+  const limit = Number.isFinite(Number(filters.limit)) ? Number(filters.limit) : 50;
   const offset = Number.isFinite(Number(filters.offset)) ? Number(filters.offset) : 0;
+
   const params = [
     filters.status ?? null,
     filters.tenant_id ?? null,
@@ -65,6 +75,21 @@ async function listStaysFiltered(filters = {}) {
   );
 }
 
+async function countStaysFiltered(filters = {}) {
+  const params = [
+    filters.status ?? null,
+    filters.tenant_id ?? null,
+    filters.room_id ?? null,
+    filters.date_from ?? null,
+    filters.date_to ?? null,
+  ];
+
+  return query(
+    sql.countStaysFiltered,
+    params,
+    "kost.stays.countStaysFiltered"
+  );
+}
 
 /**
  * Get single stay (detail page)
@@ -78,7 +103,7 @@ async function getStayById(stayId) {
 }
 
 /**
- * Snapshot stay (for audit / before update)
+ * Snapshot stay (audit / before update)
  */
 async function getStaySnapshot(stayId) {
   return query(
@@ -89,7 +114,7 @@ async function getStaySnapshot(stayId) {
 }
 
 /**
- * Normal checkout (admin action)
+ * Checkout
  */
 async function checkoutStay(stayId, payload) {
   return query(
@@ -103,18 +128,19 @@ async function checkoutStay(stayId, payload) {
   );
 }
 
-/**
- * Simple end stay (tanpa physical checkout)
- * optional helper
- */
 async function endStay(stayId, payload) {
   return query(
     sql.endStay,
-    [
-      stayId,
-      payload.check_out_at,
-    ],
+    [stayId, payload.check_out_at],
     'kost.stays.endStay'
+  );
+}
+
+async function markPhysicalCheckout(stayId, at) {
+  return query(
+    sql.markPhysicalCheckout,
+    [stayId, at],
+    "kost.stays.markPhysicalCheckout"
   );
 }
 
@@ -138,7 +164,7 @@ async function listActiveTenants() {
 }
 
 /**
- * Pricing context helper (autofill form)
+ * Pricing context helper
  */
 async function getRoomPricingContext(roomId) {
   return query(
@@ -155,21 +181,6 @@ async function forceEndStay(stayId, payload) {
     "kost.stays.forceEndStay"
   );
 }
-async function countStaysFiltered(filters = {}) {
-  const params = [
-    filters.status ?? null,
-    filters.tenant_id ?? null,
-    filters.room_id ?? null,
-    filters.date_from ?? null,
-    filters.date_to ?? null,
-  ];
-
-  return query(
-    sql.countStaysFiltered,
-    params,
-    "kost.stays.countStaysFiltered"
-  );
-}
 
 module.exports = {
   createStay,
@@ -179,6 +190,7 @@ module.exports = {
   getStaySnapshot,
   checkoutStay,
   endStay,
+  markPhysicalCheckout,
   forceEndStay,
   listAvailableRooms,
   listActiveTenants,

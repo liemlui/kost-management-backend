@@ -14,6 +14,7 @@ router.post("/", staysController.createStay);
 
 // ✅ Preferred term: Checkout
 router.post("/:id/checkout", staysController.checkoutStay);
+router.post("/:id/physical-checkout", staysController.markPhysicalCheckout);
 
 // ✅ Backward-compatible alias (jaga-jaga masih ada link lama)
 router.post("/:id/end", staysController.endStay);

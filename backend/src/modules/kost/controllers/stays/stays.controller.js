@@ -23,6 +23,7 @@ function pickForm(body = {}) {
     electricity_fixed_amount: body.electricity_fixed_amount || "",
     water_fixed_amount: body.water_fixed_amount || "",
     internet_fixed_amount: body.internet_fixed_amount || "",
+    room_variant: body.room_variant || "FAN",
 
     notes: body.notes || "",
   };
@@ -70,15 +71,19 @@ function isPastDateISO(dateStr) {
  * - additional & discount boleh kosong -> default 0 di service
  */
 function normalizeCreatePayload(body = {}) {
+  const rp = (toNullIfEmpty(body.rent_period) || "MONTHLY");
+const rent_period = (rp === "TWO_WEEKS") ? "BIWEEKLY" : rp;
   return {
     tenant_id: toIntOrNull(body.tenant_id),
     room_id: toIntOrNull(body.room_id),
 
     check_in_at: toNullIfEmpty(body.check_in_at),
     rent_period: toNullIfEmpty(body.rent_period) || "MONTHLY",
+    room_variant: toNullIfEmpty(body.room_variant) || "FAN",
 
     additional_rent_amount: toNumOrNull(body.additional_rent_amount) ?? 0,
     additional_rent_reason: toNullIfEmpty(body.additional_rent_reason),
+
 
     discount_amount: toNumOrNull(body.discount_amount) ?? 0,
     discount_reason: toNullIfEmpty(body.discount_reason),
@@ -221,6 +226,21 @@ async function checkoutStay(req, res, next) {
     return next(err);
   }
 }
+async function markPhysicalCheckout(req, res, next) {
+  try {
+    const stayId = toIntOrNull(req.params.id);
+    if (!stayId) {
+      const e = new Error("Invalid stay id");
+      e.status = 400;
+      throw e;
+    }
+
+    await stayService.markPhysicalCheckout(stayId);
+    return res.redirect(`/admin/kost/stays/${stayId}`);
+  } catch (err) {
+    return next(err);
+  }
+}
 
 /**
  * Alias: endStay (backward compatible)
@@ -314,5 +334,6 @@ module.exports = {
   renderStayDetail,
   createStay,
   checkoutStay,
+  markPhysicalCheckout,
   endStay,
 };

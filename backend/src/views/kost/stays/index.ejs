@@ -73,8 +73,10 @@
         <th>Tenant</th>
         <th>Room</th>
         <th>Check-in</th>
-        <th>Expected checkout</th>
-        <th>Checkout date</th>
+        <th>Planned End</th>
+        <th>Contract Ended At</th>
+        <th>Physical check-out</th>
+
         <th>Period</th>
 
         <!-- Pricing summary (aman walau beberapa field belum ada di query) -->
@@ -89,7 +91,7 @@
     <tbody>
       <% if (!stays || stays.length === 0) { %>
         <tr>
-          <td colspan="12" class="text-muted">No stays yet.</td>
+          <td colspan="13" class="text-muted">No stays yet.</td>
         </tr>
       <% } %>
 
@@ -115,6 +117,7 @@
           <td><%= fmtDate(st.check_in_at) %></td>
           <td><%= fmtDate(st.planned_check_out_at) %></td>
           <td><%= fmtDate(st.check_out_at) %></td>
+          <td><%= fmtDate(st.physical_check_out_at) %></td>
 
           <td><%= st.rent_period %></td>
 
@@ -147,6 +150,19 @@
                 Checkout
               </button>
             <% } %>
+            <% if (st.status !== 'ACTIVE' && !st.physical_check_out_at) { %>
+              <form
+                method="POST"
+                action="/admin/kost/stays/<%= st.id %>/physical-checkout"
+                class="d-inline"
+                onsubmit="return confirm('Mark physical check-out? (tenant sudah kosong & kunci sudah kembali)');"
+              >
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                  Physical Checkout
+                </button>
+              </form>
+            <% } %>
+
           </td>
 
         </tr>
@@ -178,6 +194,12 @@
     <a class="btn btn-outline-secondary <%= page <= 1 ? 'disabled' : '' %>" href="<%= prevHref %>">Prev</a>
     <a class="btn btn-outline-secondary <%= page >= totalPages ? 'disabled' : '' %>" href="<%= nextHref %>">Next</a>
   </div>
+</div>
+<div>
+  <p>1. Admin lakukan Checkout/Forced Checkout dulu (menutup stay kontrak)
+
+    2. Setelah kamar benar-benar kosong & kunci balik → baru Mark Physical Checkout
+</p>
 </div>
 
 
