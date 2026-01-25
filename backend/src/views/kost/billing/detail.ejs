@@ -1,0 +1,169 @@
+<!-- // pwe/backend/src/views/kost/billing/detail.ejs -->
+
+<%- include("../partials/header", { title }) %>
+
+<%
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-CA") : "-"; // YYYY-MM-DD
+  const fmtRp = (n) => (n === null || n === undefined) ? "-" : ("Rp " + new Intl.NumberFormat("id-ID").format(Number(n)));
+  const isDraft = invoice && invoice.status === "DRAFT";
+%>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h3 mb-1">Invoice #<%= invoice.id %></h1>
+    <div class="text-muted">
+      <span class="me-2"><strong>Status:</strong> <%= invoice.status %></span>
+      <span class="me-2"><strong>No:</strong> <%= invoice.invoice_number %></span>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 align-items-center">
+    <% if (isDraft) { %>
+      <form method="POST"
+            action="/admin/kost/billing/<%= invoice.id %>/issue"
+            class="mb-0"
+            onsubmit="return confirm('Issue invoice ini? Setelah ISSUED, invoice akan read-only.')">
+        <button class="btn btn-success" type="submit">Issue Invoice</button>
+      </form>
+    <% } else { %>
+      <span class="badge bg-info">Read-only</span>
+    <% } %>
+
+    <a class="btn btn-outline-secondary" href="/admin/kost/billing">← Back</a>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="text-muted small">Tenant</div>
+        <div class="fw-semibold"><%= invoice.tenant_name || "-" %></div>
+      </div>
+      <div class="col-md-2">
+        <div class="text-muted small">Room</div>
+        <div class="fw-semibold"><%= invoice.room_id || "-" %></div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted small">Period</div>
+        <div class="fw-semibold"><%= fmtDate(invoice.period_start) %> → <%= fmtDate(invoice.period_end) %></div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted small">Due date</div>
+        <div class="fw-semibold"><%= fmtDate(invoice.due_date) %></div>
+      </div>
+    </div>
+
+    <hr class="my-3">
+
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="text-muted">Total Amount</div>
+      <div class="fs-4 fw-bold"><%= fmtRp(invoice.total_amount) %></div>
+    </div>
+  </div>
+</div>
+
+<!-- Items -->
+<div class="card mb-3">
+  <div class="card-header fw-semibold">Invoice Items</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Description</th>
+            <th class="text-end">Qty</th>
+            <th class="text-end">Unit Price</th>
+            <th class="text-end">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!items || items.length === 0) { %>
+            <tr><td colspan="5" class="text-center py-4 text-muted">No items.</td></tr>
+          <% } else { %>
+            <% items.forEach(it => { %>
+              <tr>
+                <td><code><%= it.item_type %></code></td>
+                <td><%= it.description || "-" %></td>
+                <td class="text-end"><%= it.qty %></td>
+                <td class="text-end"><%= fmtRp(it.unit_price) %></td>
+                <td class="text-end fw-semibold"><%= fmtRp(it.amount) %></td>
+              </tr>
+            <% }) %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Electricity -->
+<div class="card mb-4">
+  <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+    <span>Electricity</span>
+    <% if (!isDraft) { %>
+      <span class="badge text-bg-secondary">Read-only (status: <%= invoice.status %>)</span>
+    <% } %>
+  </div>
+
+  <div class="card-body">
+    <% if (!electricity) { %>
+      <div class="text-muted">No electricity record for this invoice.</div>
+    <% } else { %>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-3">
+          <div class="text-muted small">Allowance (kWh)</div>
+          <div class="fw-semibold"><%= electricity.allowance_kwh %></div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted small">Tariff (Rp/kWh)</div>
+          <div class="fw-semibold"><%= fmtRp(electricity.tariff_per_kwh) %></div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted small">kWh used</div>
+          <div class="fw-semibold"><%= electricity.kwh_used ?? "-" %></div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted small">Overage amount</div>
+          <div class="fw-semibold"><%= fmtRp(electricity.overage_amount) %></div>
+        </div>
+      </div>
+
+      <form method="POST" action="/admin/kost/billing/<%= invoice.id %>/meter" class="row g-2">
+        <input type="hidden" name="room_id" value="<%= electricity.room_id %>">
+
+        <div class="col-md-4">
+          <label class="form-label">Start kWh</label>
+          <input class="form-control" name="start_kwh" type="number" step="0.1" required
+                 value="<%= electricity.start_kwh ?? '' %>" <%= !isDraft ? "disabled" : "" %>>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">End kWh</label>
+          <input class="form-control" name="end_kwh" type="number" step="0.1" required
+                 value="<%= electricity.end_kwh ?? '' %>" <%= !isDraft ? "disabled" : "" %>>
+        </div>
+
+        <div class="col-md-4 d-flex align-items-end">
+          <button class="btn btn-primary w-100" type="submit" <%= !isDraft ? "disabled" : "" %>>
+            Save Meter & Compute Overage
+          </button>
+        </div>
+
+        <% if (isDraft) { %>
+          <div class="col-12">
+            <div class="text-muted small">
+              Catatan: start/end akan disimpan sebagai meter_readings baru, lalu update invoice_electricity,
+              sync item <code>ELECTRIC_OVERAGE</code>, dan recompute total invoice.
+            </div>
+          </div>
+        <% } %>
+      </form>
+
+    <% } %>
+  </div>
+</div>
+
+<%- include("../partials/footer") %>

@@ -9,6 +9,7 @@ const roomAmenitiesRoutes = require("./rooms/roomAmenities.routes");
 
 const tenantsRoutes = require("./tenants/tenants.routes");
 const staysRoutes = require("./stays/stays.routes");
+const billingRoutes = require("./billing/billing.routes");
 
 
 router.use("/rooms", roomsRoutes);
@@ -16,6 +17,7 @@ router.use("/room-types", roomTypesRoutes);
 router.use("/amenities", amenitiesRoutes);
 router.use("/rooms/:id/amenities", roomAmenitiesRoutes);
 
+router.use("/billing", billingRoutes);
 
 router.use("/tenants", tenantsRoutes);
 router.use("/stays", staysRoutes);

@@ -169,7 +169,12 @@ async function createStay(payload) {
   let rent_period = payload.rent_period || "MONTHLY";
   if (rent_period === "TWO_WEEKS") rent_period = "BIWEEKLY";
 
-  const billing_anchor_day = computeBillingAnchorDay(check_in_at, payload.billing_anchor_day);
+let billing_anchor_day = null;
+
+// billing_anchor_day hanya relevan untuk MONTHLY
+if (rent_period === "MONTHLY") {
+  billing_anchor_day = computeBillingAnchorDay(check_in_at, payload.billing_anchor_day);
+}
 
   const room_variant = (payload.room_variant || "FAN").toUpperCase();
 

@@ -1,7 +1,18 @@
-exports.issueInvoice = async (invoiceId, actorUserId) => {
-  // 1. validate current status
-  // 2. calculate total from invoice_items
-  // 3. calculate due_date fallback
-  // 4. update invoice
-  // 5. insert invoice_status_history
+// pwe/backend/src/modules/kost/services/billing/invoice.services.js
+const invoicesRepo = require("../../repos/billing/invoice.repo");
+async function issueInvoice(invoiceId, actorUserId) {
+  const res = await invoicesRepo.issueInvoice(invoiceId);
+
+  if (res.rowCount === 0) {
+    const err = new Error("Invoice not in DRAFT or not found");
+    err.status = 400;
+    throw err;
+  }
+
+  return res.rows[0];
+}
+
+module.exports = {
+
+  issueInvoice,
 };

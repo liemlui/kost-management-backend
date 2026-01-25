@@ -1,0 +1,99 @@
+<!-- // pwe/backend/src/views/kost/billing/index.ejs -->
+
+<%- include("../partials/header", { title }) %>
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 mb-0">Billing</h1>
+
+  <form method="POST" action="/admin/kost/billing/generate-draft" class="mb-0">
+    <button class="btn btn-primary" type="submit">
+      Generate Draft (H-7)
+    </button>
+  </form>
+</div>
+
+<form method="GET" action="/admin/kost/billing" class="row g-2 mb-3">
+  <div class="col-auto">
+    <select name="status" class="form-select">
+      <option value="" <%= !status ? "selected" : "" %>>All</option>
+      <option value="DRAFT" <%= status === "DRAFT" ? "selected" : "" %>>DRAFT</option>
+      <option value="ISSUED" <%= status === "ISSUED" ? "selected" : "" %>>ISSUED</option>
+      <option value="PAID" <%= status === "PAID" ? "selected" : "" %>>PAID</option>
+      <option value="VOID" <%= status === "VOID" ? "selected" : "" %>>VOID</option>
+      <option value="CANCELLED" <%= status === "CANCELLED" ? "selected" : "" %>>CANCELLED</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-outline-secondary" type="submit">Filter</button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>No</th>
+            <th>Status</th>
+            <th>Tenant</th>
+            <th>Room</th>
+            <th>Period</th>
+            <th>Due</th>
+            <th class="text-end">Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!invoices || invoices.length === 0) { %>
+            <tr>
+              <td colspan="9" class="text-center py-4 text-muted">No invoices found.</td>
+            </tr>
+          <% } else { %>
+            <% invoices.forEach(inv => { %>
+              <tr>
+                <td><%= inv.id %></td>
+                <td><%= inv.invoice_number %></td>
+                <td>
+                <%
+                const statusClass = {
+                    DRAFT: "bg-secondary",
+                    ISSUED: "bg-primary",
+                    PAID: "bg-success",
+                    VOID: "bg-danger",
+                    CANCELLED: "bg-warning text-dark"
+                }[inv.status] || "bg-secondary";
+                %>
+
+                <span class="badge <%= statusClass %>"><%= inv.status %></span>
+                </td>
+                <td><%= inv.tenant_name || "-" %></td>
+                <td><%= inv.room_id || "-" %></td>
+                <td>
+                  <%= inv.period_start ? new Date(inv.period_start).toISOString().slice(0,10) : "-" %>
+                  →
+                  <%= inv.period_end ? new Date(inv.period_end).toISOString().slice(0,10) : "-" %>
+                </td>
+                <td><%= inv.due_date ? new Date(inv.due_date).toISOString().slice(0,10) : "-" %></td>
+                <%
+                const fmtRp = (n) =>
+                    (n === null || n === undefined)
+                    ? "-"
+                    : ("Rp " + new Intl.NumberFormat("id-ID").format(Number(n)));
+                %>
+
+                <td class="text-end fw-semibold"><%= fmtRp(inv.total_amount) %></td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-primary" href="/admin/kost/billing/<%= inv.id %>">Detail</a>
+                </td>
+              </tr>
+            <% }) %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include("../partials/footer") %>
