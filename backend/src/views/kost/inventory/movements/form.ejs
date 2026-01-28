@@ -1,0 +1,125 @@
+<% const title = "New Inventory Movement"; %>
+<%- include('../../partials/header', { title }) %>
+
+<h1 class="h3 mb-3"><%= title %></h1>
+
+<% if (errors && errors.length) { %>
+  <div class="alert alert-danger">
+    <ul class="mb-0">
+      <% errors.forEach(e => { %><li><%= e %></li><% }) %>
+    </ul>
+  </div>
+<% } %>
+
+<div class="card">
+  <div class="card-body">
+    <form method="POST" action="/admin/kost/inventory/movements" id="moveForm">
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Item *</label>
+          <select class="form-select" name="item_id" required>
+            <option value="">-- select --</option>
+            <% (items || []).forEach(i => { %>
+              <option value="<%= i.id %>" <%= String(form.item_id || '') === String(i.id) ? 'selected' : '' %>>
+                <%= i.name %> (<%= i.uom || 'PCS' %>)
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Movement Type *</label>
+          <select class="form-select" name="movement_type" id="movement_type" required>
+            <% (movementTypes || []).forEach(t => { %>
+              <option value="<%= t %>" <%= String(form.movement_type || '') === String(t) ? 'selected' : '' %>>
+                <%= t %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Qty *</label>
+          <input class="form-control" name="qty" inputmode="decimal" required value="<%= form.qty || '' %>">
+        </div>
+
+        <div class="col-md-4" id="unitCostWrap">
+          <label class="form-label">Unit Cost (PURCHASE) *</label>
+          <input class="form-control" name="unit_cost" inputmode="decimal" value="<%= form.unit_cost || '' %>">
+        </div>
+
+        <div class="col-md-4" id="adjustDirWrap">
+          <label class="form-label">Adjust Direction *</label>
+          <select class="form-select" name="adjust_direction" id="adjust_direction">
+            <% (adjustDirections || []).forEach(d => { %>
+              <option value="<%= d %>" <%= String(form.adjust_direction || 'IN') === String(d) ? 'selected' : '' %>><%= d %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="col-md-6" id="fromWrap">
+          <label class="form-label">From Location</label>
+          <select class="form-select" name="from_location_id" id="from_location_id">
+            <option value="">-- select --</option>
+            <% (locations || []).forEach(l => { %>
+              <option value="<%= l.id %>" <%= String(form.from_location_id || '') === String(l.id) ? 'selected' : '' %>>
+                <%= l.name %> (<%= l.location_type %>)
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="col-md-6" id="toWrap">
+          <label class="form-label">To Location</label>
+          <select class="form-select" name="to_location_id" id="to_location_id">
+            <option value="">-- select --</option>
+            <% (locations || []).forEach(l => { %>
+              <option value="<%= l.id %>" <%= String(form.to_location_id || '') === String(l.id) ? 'selected' : '' %>>
+                <%= l.name %> (<%= l.location_type %>)
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Condition After</label>
+          <input class="form-control" name="condition_after" value="<%= form.condition_after || '' %>">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Notes</label>
+          <input class="form-control" name="notes" value="<%= form.notes || '' %>">
+        </div>
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <a class="btn btn-outline-secondary" href="/admin/kost/inventory/movements">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+<hr class="my-4">
+
+<div class="alert alert-info">
+  <h6 class="mb-2">📘 Inventory Movement Legend</h6>
+
+  <ul class="mb-2">
+    <li><strong>PURCHASE</strong>: Barang masuk dari pembelian supplier (stok bertambah).</li>
+    <li><strong>USE</strong>: Barang digunakan untuk operasional (stok berkurang).</li>
+    <li><strong>TRANSFER</strong>: Barang dipindah antar lokasi (stok tetap).</li>
+    <li><strong>ADJUST</strong>: Koreksi stok akibat selisih hitung (IN / OUT).</li>
+    <li><strong>DISPOSAL</strong>: Barang rusak atau dibuang permanen.</li>
+    <li><strong>REPAIR</strong>: Barang dikirim ke lokasi perbaikan.</li>
+  </ul>
+
+  <div class="small text-muted">
+    Semua perubahan stok harus melalui movement dan tidak dapat diubah setelah disimpan.
+  </div>
+</div>
+
+
+<script src="/js/kost/inventory/movements-form.js" defer></script>
+
+<%- include('../../partials/footer') %>

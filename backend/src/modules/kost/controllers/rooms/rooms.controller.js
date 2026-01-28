@@ -6,7 +6,7 @@ const roomTypesRepo = require("../../repos/rooms/roomTypes.repo");
 
 const FLOOR_OPTIONS = [1, 2];
 const ZONE_OPTIONS = ["", "FRONT", "MIDDLE", "BACK"]; // "" => null
-const STATUS_OPTIONS = ["AVAILABLE", "MAINTENANCE", "BLOCKED"];
+const STATUS_OPTIONS = ["AVAILABLE", "MAINTENANCE", "INACTIVE"];
 
 function normalizeRoomPayload(body) {
   const code = (body.code || "").trim();
@@ -150,9 +150,10 @@ async function showEditForm(req, res, next) {
   try {
     const id = Number(req.params.id);
 
-    const [roomTypes, room] = await Promise.all([
+    const [roomTypes, room, roomAmenities] = await Promise.all([
       roomRepo.listRoomTypes(),
       roomRepo.getRoomById(id),
+      roomAmenityRepo.listRoomAmenities(id),
     ]);
 
     if (!room) return res.status(404).send("Room not found");
@@ -172,6 +173,7 @@ async function showEditForm(req, res, next) {
         notes: room.notes ?? "",
       },
       roomId: id,
+      roomAmenities,
       errors: [],
     });
   } catch (err) {

@@ -7,9 +7,11 @@ const sql = require("../../sql");
  * Returns rows[].
  */
 async function listRoomAmenities(roomId) {
+    const rid = assertNumberId(roomId, "kost.roomAmenities.listRoomAmenities");
+
   const result = await query(
     sql.rooms.listRoomAmenities,
-    [roomId],
+    [rid],
     { label: "kost.roomAmenities.listRoomAmenities" }
   );
   return result.rows;
@@ -28,6 +30,17 @@ async function listActiveAmenitiesNotInRoom(roomId) {
   );
   return result.rows;
 }
+
+function assertNumberId(id, label) {
+  const n = Number(id);
+  if (!Number.isInteger(n) || n <= 0) {
+    const err = new Error(`Invalid id for ${label}: ${id}`);
+    err.status = 400;
+    throw err;
+  }
+  return n;
+}
+
 
 /**
  * Attach an amenity to a room (create mapping).
@@ -78,9 +91,12 @@ async function updateRoomAmenity(roomId, roomAmenityId, payload) {
  * Returns deleted row (or null) depending on SQL RETURNING.
  */
 async function deleteRoomAmenity(roomId, roomAmenityId) {
+    const rid = assertNumberId(roomId, "kost.roomAmenities.deleteRoomAmenity.roomId");
+  const raid = assertNumberId(roomAmenityId, "kost.roomAmenities.deleteRoomAmenity.roomAmenityId");
+
   const result = await query(
     sql.rooms.deleteRoomAmenity,
-    [roomAmenityId, roomId],
+    [raid, rid],
     { label: "kost.roomAmenities.deleteRoomAmenity" }
   );
 

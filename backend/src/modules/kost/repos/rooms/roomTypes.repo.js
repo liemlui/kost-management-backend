@@ -35,22 +35,14 @@ async function getRoomTypeById(id) {
  */
 async function insertRoomType(payload) {
   const {
-    code,
-    name,
+    code, name,
+    base_monthly_price, deposit_amount,
     is_capsule,
-    room_width_m,
-    room_length_m,
-    bathroom_location,
-    bathroom_width_m,
-    bathroom_length_m,
-    has_ac,
-    has_fan,
-    bed_type,
-    bed_size_cm,
-    base_monthly_price,
-    deposit_amount,
-    is_active,
-    notes,
+    room_width_m, room_length_m,
+    bathroom_location, bathroom_width_m, bathroom_length_m,
+    has_ac, has_fan,
+    bed_type, bed_size_cm,
+    is_active, notes,
   } = payload;
 
   const result = await query(
@@ -58,6 +50,8 @@ async function insertRoomType(payload) {
     [
       code,
       name,
+      base_monthly_price ?? 0,
+      deposit_amount ?? 0,
       !!is_capsule,
       room_width_m || null,
       room_length_m || null,
@@ -68,8 +62,6 @@ async function insertRoomType(payload) {
       !!has_fan,
       bed_type || null,
       bed_size_cm || null,
-      base_monthly_price || 0,
-      deposit_amount || 0,
       !!is_active,
       notes || null,
     ],
@@ -87,6 +79,8 @@ async function updateRoomType(id, payload) {
   const {
     code,
     name,
+    base_monthly_price,
+    deposit_amount,
     is_capsule,
     room_width_m,
     room_length_m,
@@ -97,8 +91,7 @@ async function updateRoomType(id, payload) {
     has_fan,
     bed_type,
     bed_size_cm,
-    base_monthly_price,
-    deposit_amount,
+
     is_active,
     notes,
   } = payload;
@@ -109,6 +102,8 @@ async function updateRoomType(id, payload) {
       id,
       code,
       name,
+      base_monthly_price ?? 0,
+      deposit_amount ?? 0,
       !!is_capsule,
       room_width_m || null,
       room_length_m || null,
@@ -119,8 +114,6 @@ async function updateRoomType(id, payload) {
       !!has_fan,
       bed_type || null,
       bed_size_cm || null,
-      base_monthly_price || 0,
-      deposit_amount || 0,
       !!is_active,
       notes || null,
     ],

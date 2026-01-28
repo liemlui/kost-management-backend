@@ -17,7 +17,7 @@ async function manageRoomAmenities(req, res, next) {
   try {
     const roomId = Number(req.params.id);
     const room = await roomRepo.getRoomById(roomId);
-    if (!room) return res.status(404).send("Room not found");
+if (!Number.isInteger(roomId) || roomId <= 0) return res.status(400).send("Invalid room id");
 
     const roomAmenities = await roomAmenityRepo.listRoomAmenities(roomId);
     const picklist = await roomAmenityRepo.listActiveAmenitiesNotInRoom(roomId);
@@ -44,11 +44,12 @@ async function addRoomAmenity(req, res, next) {
     const amenity_id = Number(req.body.amenity_id);
     const qty = toQty(req.body.qty);
     const conditionRaw = (req.body.condition || "").trim();
-    const condition = conditionRaw ? conditionRaw : null;
+    const condition = conditionRaw ? conditionRaw.toUpperCase() : null;
 
-    if (!amenity_id) {
+    if (!Number.isInteger(amenity_id) || amenity_id <= 0) {
       return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
     }
+
     if (condition && !ALLOWED_CONDITIONS.has(condition)) {
       return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
     }
@@ -63,10 +64,7 @@ async function addRoomAmenity(req, res, next) {
 
     return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
   } catch (err) {
-    // duplicate mapping (unique violation) → redirect aja (tidak perlu crash)
-    if (err && err.code === "23505") {
-      return res.redirect(`/admin/kost/rooms/${req.params.id}/amenities`);
-    }
+
     next(err);
   }
 }

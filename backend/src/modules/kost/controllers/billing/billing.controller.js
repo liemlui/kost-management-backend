@@ -3,14 +3,43 @@ const invoicesRepo = require("../../repos/billing/invoice.repo");
 const genService = require("../../services/billing/generator.service");
 const elecService = require("../../services/billing/electricity.service");
 const invoiceService = require("../../services/billing/invoice.services");
+const boardRepo = require("../../repos/billing/board.repo");
+const issueService = require("../../services/billing/issue.service");
 
 async function list(req, res, next) {
   try {
-    const status = req.query.status ?? null;
-    const result = await invoicesRepo.listInvoices(status);
-    res.render("kost/billing/index", { title: "Billing", invoices: result.rows, status });
-  } catch (e) { next(e); }
+    const past = Number(req.query.past ?? 2);
+    const future = Number(req.query.future ?? 10);
+
+    const result = await boardRepo.listBillingBoard(past, future);
+
+    res.render("kost/billing/index", {
+      title: "Billing",
+      rows: result.rows,
+      past,
+      future,
+    });
+  } catch (e) {
+    next(e);
+  }
 }
+async function issueStay(req, res, next) {
+  try {
+    const stayId = Number(req.params.stayId);
+    const inv = await issueService.issueForStay(stayId);
+
+    if (!inv) {
+      req.flash?.("error", "Cannot issue invoice (stay not active or invalid).");
+      return res.redirect("/admin/kost/billing");
+    }
+
+    return res.redirect(`/admin/kost/billing/${inv.id}`);
+  } catch (e) {
+    next(e);
+  }
+}
+
+
 
 async function detail(req, res, next) {
   try {
@@ -33,7 +62,7 @@ async function detail(req, res, next) {
 async function generateDraft(req, res, next) {
   try {
     await genService.generateDraft();
-    res.redirect("/admin/kost/billing?status=DRAFT");
+    res.redirect("/admin/kost/billing");
   } catch (e) { next(e); }
 }
 
@@ -63,5 +92,5 @@ async function issueInvoice(req, res, next) {
 
 module.exports = { 
     list, detail, generateDraft, captureMeter 
-, issueInvoice 
+, issueInvoice , issueStay
 };

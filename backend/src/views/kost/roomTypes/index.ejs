@@ -2,7 +2,9 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h3 mb-0">Room Types</h1>
-  <a class="btn btn-primary" href="/admin/kost/room-types/new">+ New Room Type</a>
+  <a class="btn btn-primary" href="/admin/kost/room-types/new"
+    >+ New Room Type</a
+  >
 </div>
 
 <div class="card">
@@ -10,49 +12,55 @@
     <table class="table table-striped table-hover mb-0 align-middle">
       <thead class="table-light">
         <tr>
-            <th style="width:100px;">Status</th>
-          <th style="width:80px;">ID</th>
-          <th style="width:120px;">Code</th>
+          <th style="width: 100px">Status</th>
+          <th style="width: 80px">ID</th>
+          <th style="width: 120px">Code</th>
           <th>Name</th>
-          <th class="text-end" style="width:160px;">Base Price</th>
-          <th class="text-end" style="width:160px;">Deposit</th>
+          <th class="text-end" style="width: 160px">Base Price</th>
+          <th class="text-end" style="width: 160px">Deposit</th>
 
-          <th style="width:90px;">AC</th>
-          <th style="width:90px;">Fan</th>
-          <th style="width:110px;">Capsule</th>
-          <th style="width:120px;">Action</th>
+          <th style="width: 90px">AC</th>
+          <th style="width: 90px">Fan</th>
+          <th style="width: 110px">Capsule</th>
+          <th style="width: 120px">Action</th>
         </tr>
       </thead>
       <tbody>
         <% if (!roomTypes || roomTypes.length === 0) { %>
-          <tr><td colspan="8" class="text-muted">No room types yet.</td></tr>
-        <% } %>
+        <tr>
+          <td colspan="8" class="text-muted">No room types yet.</td>
+        </tr>
+        <% } %> <% (roomTypes || []).forEach(rt => { %>
+        <tr>
+          <td>
+            <% if (rt.is_active) { %>
+            <span class="badge bg-success">Active</span>
+            <% } else { %>
+            <span class="badge bg-secondary">Inactive</span>
+            <% } %>
+          </td>
 
-        <% (roomTypes || []).forEach(rt => { %>
-          <tr>
-            <td>
-                <% if (rt.is_active) { %>
-                    <span class="badge bg-success">Active</span>
-                <% } else { %>
-                    <span class="badge bg-secondary">Inactive</span>
-                <% } %>
-            </td>
+          <td><%= rt.id %></td>
+          <td class="fw-semibold"><%= rt.code %></td>
+          <td><%= rt.name %></td>
+          <td class="text-end">
+            Rp <%= Number(rt.base_monthly_price||0).toLocaleString("id-ID") %>
+          </td>
+          <td class="text-end">
+            Rp <%= Number(rt.deposit_amount||0).toLocaleString("id-ID") %>
+          </td>
 
-            <td><%= rt.id %></td>
-            <td class="fw-semibold"><%= rt.code %></td>
-            <td><%= rt.name %></td>
-            <td class="text-end">Rp <%= Number(rt.base_monthly_price||0).toLocaleString("id-ID") %></td>
-            <td class="text-end"> 
-                Rp <%= Number(rt.deposit_amount||0).toLocaleString("id-ID") %>
-            </td>
-
-            <td><%= rt.has_ac ? "Yes" : "No" %></td>
-            <td><%= rt.has_fan ? "Yes" : "No" %></td>
-            <td><%= rt.is_capsule ? "Yes" : "No" %></td>
-            <td>
-              <a class="btn btn-sm btn-outline-secondary" href="/admin/kost/room-types/<%= rt.id %>/edit">Edit</a>
-            </td>
-          </tr>
+          <td><%= rt.has_ac ? "Yes" : "No" %></td>
+          <td><%= rt.has_fan ? "Yes" : "No" %></td>
+          <td><%= rt.is_capsule ? "Yes" : "No" %></td>
+          <td>
+            <a
+              class="btn btn-sm btn-outline-secondary"
+              href="/admin/kost/room-types/<%= rt.id %>/edit"
+              >Edit</a
+            >
+          </td>
+        </tr>
         <% }) %>
       </tbody>
     </table>

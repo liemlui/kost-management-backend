@@ -1,0 +1,83 @@
+<% const title = "Inventory Movements"; %>
+<%- include('../../partials/header', { title }) %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Inventory Movements</h1>
+  <a class="btn btn-primary" href="/admin/kost/inventory/movements/new">+ New Movement</a>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form class="row g-2 align-items-end" method="GET" action="/admin/kost/inventory/movements">
+      <div class="col-md-5">
+        <label class="form-label">Item</label>
+        <select class="form-select" name="item_id">
+          <option value="">All</option>
+          <% (items || []).forEach(i => { %>
+            <option value="<%= i.id %>" <%= String(query?.item_id || '') === String(i.id) ? 'selected' : '' %>>
+              <%= i.name %> (<%= i.uom || 'PCS' %>)
+            </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Movement Type</label>
+        <select class="form-select" name="movement_type">
+          <option value="">All</option>
+          <% (movementTypes || []).forEach(t => { %>
+            <option value="<%= t %>" <%= String(query?.movement_type || '') === String(t) ? 'selected' : '' %>><%= t %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="col-md-4 d-flex gap-2">
+        <button class="btn btn-outline-primary" type="submit">Filter</button>
+        <a class="btn btn-outline-secondary" href="/admin/kost/inventory/movements">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-striped table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width:70px;">ID</th>
+          <th style="width:170px;">Time</th>
+          <th>Item</th>
+          <th style="width:120px;">Type</th>
+          <th class="text-end" style="width:120px;">Qty</th>
+          <th style="width:180px;">From</th>
+          <th style="width:180px;">To</th>
+          <th class="text-end" style="width:140px;">Unit Cost</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!movements || movements.length === 0) { %>
+          <tr><td colspan="9" class="text-muted p-3">No movements yet.</td></tr>
+        <% } %>
+
+        <% (movements || []).forEach(m => { %>
+          <tr>
+            <td><%= m.id %></td>
+            <td class="mono"><%= new Date(m.created_at).toLocaleString("id-ID") %></td>
+            <td class="fw-semibold"><%= m.item_name %> <span class="text-muted">(<%= m.item_uom || 'PCS' %>)</span></td>
+            <td><span class="badge text-bg-secondary"><%= m.movement_type %></span></td>
+            <td class="text-end"><%= Number(m.qty || 0).toLocaleString("id-ID") %></td>
+            <td><%= m.from_location_name || "-" %></td>
+            <td><%= m.to_location_name || "-" %></td>
+            <td class="text-end">
+              <%= m.unit_cost == null ? "-" : ("Rp " + Number(m.unit_cost).toLocaleString("id-ID")) %>
+            </td>
+            <td><%= m.notes || "-" %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../../partials/footer') %>

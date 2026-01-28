@@ -1,5 +1,11 @@
 // backend/src/views/kost/rooms/detail.ejs
 <%- include('../partials/header', { title }) %>
+<%
+  const _amenities = Array.isArray(roomAmenities) ? roomAmenities : [];
+  const hasAC = _amenities.some(a => a.amenity_code === "AC");
+  const hasFAN = _amenities.some(a => a.amenity_code === "FAN");
+%>
+
 <% if (query && query.type_changed) { %>
   <div class="alert alert-success">Room type updated.</div>
 <% } %>
@@ -13,6 +19,8 @@
   <div class="d-flex gap-2">
     <a class="btn btn-outline-secondary" href="/admin/kost/rooms">Back</a>
     <a class="btn btn-outline-primary" href="/admin/kost/rooms/<%= room.id %>/edit">Edit</a>
+      <a class="btn btn-outline-dark" href="/admin/kost/rooms/<%= room.id %>/assets">Assets</a>
+
   </div>
 </div>
 
@@ -63,8 +71,10 @@
             ? `${room.room_width_m} x ${room.room_length_m}`
             : "-" %>
         </li>
-        <li><b>AC:</b> <%= room.has_ac ? "Yes" : "No" %></li>
-        <li><b>Fan:</b> <%= room.has_fan ? "Yes" : "No" %></li>
+
+
+        <li><b>AC:</b> <%= hasAC ? "Yes" : "No" %></li>
+        <li><b>Fan:</b> <%= hasFAN ? "Yes" : "No" %></li>
         <li><b>Bathroom Location:</b> <%= room.bathroom_location || "-" %></li>
         <li><b>Bathroom Size (m):</b>
           <%= (room.bathroom_width_m != null && room.bathroom_length_m != null)
@@ -136,7 +146,6 @@
   <a class="btn btn-sm btn-outline-dark" href="/admin/kost/rooms/<%= room.id %>/amenities">Manage</a>
 </div>
 
-<% const _amenities = (typeof roomAmenities === "undefined") ? [] : roomAmenities; %>
 <% if (_amenities.length === 0) { %>
   <div class="text-muted">No amenities configured for this room.</div>
 <% } else { %>
@@ -152,7 +161,7 @@
         </tr>
       </thead>
       <tbody>
-        <% roomAmenities.forEach(a => { %>
+        <% _amenities.forEach(a => { %>
           <tr>
             <td><%= a.category %></td>
             <td><b><%= a.amenity_name %></b> <span class="text-muted">(<%= a.amenity_code %>)</span></td>

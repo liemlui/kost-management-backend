@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict jFyC6dakK3Kzocck686c4czJYdGPUf2XiuiVrjIwXB9zbPM1XfCgrcCUMqmbQkk
+\restrict ynSLom8BSfrD6tNP5Qqg1BIVwehMSDge3EVAtEdizbt7aIEdujfoehtiDMV5XEh
 
 -- Dumped from database version 18.1
 -- Dumped by pg_dump version 18.1
@@ -20,14 +20,39 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: kost; Type: SCHEMA; Schema: -; Owner: -
+-- Name: kost; Type: SCHEMA; Schema: -; Owner: postgres
 --
 
 CREATE SCHEMA kost;
 
 
+ALTER SCHEMA kost OWNER TO postgres;
+
 --
--- Name: set_updated_at(); Type: FUNCTION; Schema: kost; Owner: -
+-- Name: fn_recompute_invoice_total(bigint); Type: FUNCTION; Schema: kost; Owner: postgres
+--
+
+CREATE FUNCTION kost.fn_recompute_invoice_total(p_invoice_id bigint) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  UPDATE kost.invoices i
+  SET
+    total_amount = COALESCE((
+      SELECT SUM(ii.amount)
+      FROM kost.invoice_items ii
+      WHERE ii.invoice_id = p_invoice_id
+    ), 0),
+    updated_at = now()
+  WHERE i.id = p_invoice_id;
+END;
+$$;
+
+
+ALTER FUNCTION kost.fn_recompute_invoice_total(p_invoice_id bigint) OWNER TO postgres;
+
+--
+-- Name: set_updated_at(); Type: FUNCTION; Schema: kost; Owner: postgres
 --
 
 CREATE FUNCTION kost.set_updated_at() RETURNS trigger
@@ -40,12 +65,33 @@ END;
 $$;
 
 
+ALTER FUNCTION kost.set_updated_at() OWNER TO postgres;
+
+--
+-- Name: trg_invoice_items_recompute_total(); Type: FUNCTION; Schema: kost; Owner: postgres
+--
+
+CREATE FUNCTION kost.trg_invoice_items_recompute_total() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_invoice_id bigint;
+BEGIN
+  v_invoice_id := COALESCE(NEW.invoice_id, OLD.invoice_id);
+  PERFORM kost.fn_recompute_invoice_total(v_invoice_id);
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+
+ALTER FUNCTION kost.trg_invoice_items_recompute_total() OWNER TO postgres;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: amenities; Type: TABLE; Schema: kost; Owner: -
+-- Name: amenities; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.amenities (
@@ -58,8 +104,10 @@ CREATE TABLE kost.amenities (
 );
 
 
+ALTER TABLE kost.amenities OWNER TO postgres;
+
 --
--- Name: amenities_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: amenities_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.amenities_id_seq
@@ -70,15 +118,17 @@ CREATE SEQUENCE kost.amenities_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.amenities_id_seq OWNER TO postgres;
+
 --
--- Name: amenities_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: amenities_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.amenities_id_seq OWNED BY kost.amenities.id;
 
 
 --
--- Name: announcement_ack; Type: TABLE; Schema: kost; Owner: -
+-- Name: announcement_ack; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.announcement_ack (
@@ -89,8 +139,10 @@ CREATE TABLE kost.announcement_ack (
 );
 
 
+ALTER TABLE kost.announcement_ack OWNER TO postgres;
+
 --
--- Name: announcement_ack_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: announcement_ack_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.announcement_ack_id_seq
@@ -101,15 +153,17 @@ CREATE SEQUENCE kost.announcement_ack_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.announcement_ack_id_seq OWNER TO postgres;
+
 --
--- Name: announcement_ack_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: announcement_ack_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.announcement_ack_id_seq OWNED BY kost.announcement_ack.id;
 
 
 --
--- Name: announcements; Type: TABLE; Schema: kost; Owner: -
+-- Name: announcements; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.announcements (
@@ -129,8 +183,10 @@ CREATE TABLE kost.announcements (
 );
 
 
+ALTER TABLE kost.announcements OWNER TO postgres;
+
 --
--- Name: announcements_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: announcements_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.announcements_id_seq
@@ -141,15 +197,17 @@ CREATE SEQUENCE kost.announcements_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.announcements_id_seq OWNER TO postgres;
+
 --
--- Name: announcements_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: announcements_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.announcements_id_seq OWNED BY kost.announcements.id;
 
 
 --
--- Name: common_amenities; Type: TABLE; Schema: kost; Owner: -
+-- Name: common_amenities; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.common_amenities (
@@ -164,8 +222,10 @@ CREATE TABLE kost.common_amenities (
 );
 
 
+ALTER TABLE kost.common_amenities OWNER TO postgres;
+
 --
--- Name: common_amenities_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: common_amenities_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.common_amenities_id_seq
@@ -176,15 +236,17 @@ CREATE SEQUENCE kost.common_amenities_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.common_amenities_id_seq OWNER TO postgres;
+
 --
--- Name: common_amenities_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: common_amenities_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.common_amenities_id_seq OWNED BY kost.common_amenities.id;
 
 
 --
--- Name: credit_applications; Type: TABLE; Schema: kost; Owner: -
+-- Name: credit_applications; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.credit_applications (
@@ -199,8 +261,10 @@ CREATE TABLE kost.credit_applications (
 );
 
 
+ALTER TABLE kost.credit_applications OWNER TO postgres;
+
 --
--- Name: credit_applications_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: credit_applications_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.credit_applications_id_seq
@@ -211,15 +275,17 @@ CREATE SEQUENCE kost.credit_applications_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.credit_applications_id_seq OWNER TO postgres;
+
 --
--- Name: credit_applications_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: credit_applications_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.credit_applications_id_seq OWNED BY kost.credit_applications.id;
 
 
 --
--- Name: credit_movements; Type: TABLE; Schema: kost; Owner: -
+-- Name: credit_movements; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.credit_movements (
@@ -237,8 +303,10 @@ CREATE TABLE kost.credit_movements (
 );
 
 
+ALTER TABLE kost.credit_movements OWNER TO postgres;
+
 --
--- Name: credit_movements_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: credit_movements_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.credit_movements_id_seq
@@ -249,15 +317,17 @@ CREATE SEQUENCE kost.credit_movements_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.credit_movements_id_seq OWNER TO postgres;
+
 --
--- Name: credit_movements_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: credit_movements_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.credit_movements_id_seq OWNED BY kost.credit_movements.id;
 
 
 --
--- Name: deposit_movements; Type: TABLE; Schema: kost; Owner: -
+-- Name: deposit_movements; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.deposit_movements (
@@ -273,8 +343,10 @@ CREATE TABLE kost.deposit_movements (
 );
 
 
+ALTER TABLE kost.deposit_movements OWNER TO postgres;
+
 --
--- Name: deposit_movements_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: deposit_movements_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.deposit_movements_id_seq
@@ -285,15 +357,17 @@ CREATE SEQUENCE kost.deposit_movements_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.deposit_movements_id_seq OWNER TO postgres;
+
 --
--- Name: deposit_movements_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: deposit_movements_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.deposit_movements_id_seq OWNED BY kost.deposit_movements.id;
 
 
 --
--- Name: electricity_tariffs; Type: TABLE; Schema: kost; Owner: -
+-- Name: electricity_tariffs; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.electricity_tariffs (
@@ -306,8 +380,10 @@ CREATE TABLE kost.electricity_tariffs (
 );
 
 
+ALTER TABLE kost.electricity_tariffs OWNER TO postgres;
+
 --
--- Name: electricity_tariffs_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: electricity_tariffs_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.electricity_tariffs_id_seq
@@ -318,15 +394,17 @@ CREATE SEQUENCE kost.electricity_tariffs_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.electricity_tariffs_id_seq OWNER TO postgres;
+
 --
--- Name: electricity_tariffs_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: electricity_tariffs_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.electricity_tariffs_id_seq OWNED BY kost.electricity_tariffs.id;
 
 
 --
--- Name: invoice_electricity; Type: TABLE; Schema: kost; Owner: -
+-- Name: invoice_electricity; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.invoice_electricity (
@@ -356,8 +434,10 @@ CREATE TABLE kost.invoice_electricity (
 );
 
 
+ALTER TABLE kost.invoice_electricity OWNER TO postgres;
+
 --
--- Name: invoice_electricity_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: invoice_electricity_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.invoice_electricity_id_seq
@@ -368,15 +448,17 @@ CREATE SEQUENCE kost.invoice_electricity_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.invoice_electricity_id_seq OWNER TO postgres;
+
 --
--- Name: invoice_electricity_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: invoice_electricity_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.invoice_electricity_id_seq OWNED BY kost.invoice_electricity.id;
 
 
 --
--- Name: invoice_items; Type: TABLE; Schema: kost; Owner: -
+-- Name: invoice_items; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.invoice_items (
@@ -398,8 +480,10 @@ CREATE TABLE kost.invoice_items (
 );
 
 
+ALTER TABLE kost.invoice_items OWNER TO postgres;
+
 --
--- Name: invoice_items_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: invoice_items_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.invoice_items_id_seq
@@ -410,15 +494,17 @@ CREATE SEQUENCE kost.invoice_items_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.invoice_items_id_seq OWNER TO postgres;
+
 --
--- Name: invoice_items_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: invoice_items_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.invoice_items_id_seq OWNED BY kost.invoice_items.id;
 
 
 --
--- Name: invoice_status_history; Type: TABLE; Schema: kost; Owner: -
+-- Name: invoice_status_history; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.invoice_status_history (
@@ -432,8 +518,10 @@ CREATE TABLE kost.invoice_status_history (
 );
 
 
+ALTER TABLE kost.invoice_status_history OWNER TO postgres;
+
 --
--- Name: invoice_status_history_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: invoice_status_history_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.invoice_status_history_id_seq
@@ -444,15 +532,17 @@ CREATE SEQUENCE kost.invoice_status_history_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.invoice_status_history_id_seq OWNER TO postgres;
+
 --
--- Name: invoice_status_history_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: invoice_status_history_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.invoice_status_history_id_seq OWNED BY kost.invoice_status_history.id;
 
 
 --
--- Name: invoices; Type: TABLE; Schema: kost; Owner: -
+-- Name: invoices; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.invoices (
@@ -483,8 +573,10 @@ CREATE TABLE kost.invoices (
 );
 
 
+ALTER TABLE kost.invoices OWNER TO postgres;
+
 --
--- Name: invoices_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: invoices_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.invoices_id_seq
@@ -495,15 +587,17 @@ CREATE SEQUENCE kost.invoices_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.invoices_id_seq OWNER TO postgres;
+
 --
--- Name: invoices_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: invoices_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.invoices_id_seq OWNED BY kost.invoices.id;
 
 
 --
--- Name: meter_readings; Type: TABLE; Schema: kost; Owner: -
+-- Name: meter_readings; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.meter_readings (
@@ -518,8 +612,10 @@ CREATE TABLE kost.meter_readings (
 );
 
 
+ALTER TABLE kost.meter_readings OWNER TO postgres;
+
 --
--- Name: meter_readings_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: meter_readings_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.meter_readings_id_seq
@@ -530,15 +626,17 @@ CREATE SEQUENCE kost.meter_readings_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.meter_readings_id_seq OWNER TO postgres;
+
 --
--- Name: meter_readings_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: meter_readings_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.meter_readings_id_seq OWNED BY kost.meter_readings.id;
 
 
 --
--- Name: payment_submission_files; Type: TABLE; Schema: kost; Owner: -
+-- Name: payment_submission_files; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.payment_submission_files (
@@ -553,8 +651,10 @@ CREATE TABLE kost.payment_submission_files (
 );
 
 
+ALTER TABLE kost.payment_submission_files OWNER TO postgres;
+
 --
--- Name: payment_submission_files_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: payment_submission_files_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.payment_submission_files_id_seq
@@ -565,15 +665,17 @@ CREATE SEQUENCE kost.payment_submission_files_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.payment_submission_files_id_seq OWNER TO postgres;
+
 --
--- Name: payment_submission_files_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: payment_submission_files_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.payment_submission_files_id_seq OWNED BY kost.payment_submission_files.id;
 
 
 --
--- Name: payment_submissions; Type: TABLE; Schema: kost; Owner: -
+-- Name: payment_submissions; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.payment_submissions (
@@ -596,8 +698,10 @@ CREATE TABLE kost.payment_submissions (
 );
 
 
+ALTER TABLE kost.payment_submissions OWNER TO postgres;
+
 --
--- Name: payment_submissions_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: payment_submissions_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.payment_submissions_id_seq
@@ -608,15 +712,17 @@ CREATE SEQUENCE kost.payment_submissions_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.payment_submissions_id_seq OWNER TO postgres;
+
 --
--- Name: payment_submissions_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: payment_submissions_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.payment_submissions_id_seq OWNED BY kost.payment_submissions.id;
 
 
 --
--- Name: payment_verifications; Type: TABLE; Schema: kost; Owner: -
+-- Name: payment_verifications; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.payment_verifications (
@@ -634,8 +740,10 @@ CREATE TABLE kost.payment_verifications (
 );
 
 
+ALTER TABLE kost.payment_verifications OWNER TO postgres;
+
 --
--- Name: payment_verifications_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: payment_verifications_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.payment_verifications_id_seq
@@ -646,15 +754,17 @@ CREATE SEQUENCE kost.payment_verifications_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.payment_verifications_id_seq OWNER TO postgres;
+
 --
--- Name: payment_verifications_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: payment_verifications_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.payment_verifications_id_seq OWNED BY kost.payment_verifications.id;
 
 
 --
--- Name: room_amenities; Type: TABLE; Schema: kost; Owner: -
+-- Name: room_amenities; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.room_amenities (
@@ -664,13 +774,18 @@ CREATE TABLE kost.room_amenities (
     qty smallint DEFAULT 1 NOT NULL,
     condition text,
     notes text,
+    is_active boolean DEFAULT true NOT NULL,
+    source text DEFAULT 'MANUAL'::text NOT NULL,
     CONSTRAINT chk_room_amenities_condition CHECK (((condition IS NULL) OR (condition = ANY (ARRAY['NEW'::text, 'GOOD'::text, 'FAIR'::text, 'DAMAGED'::text, 'MISSING'::text])))),
-    CONSTRAINT chk_room_amenities_qty_positive CHECK ((qty >= 1))
+    CONSTRAINT chk_room_amenities_qty_positive CHECK ((qty >= 1)),
+    CONSTRAINT chk_room_amenities_source CHECK ((source = ANY (ARRAY['DEFAULT'::text, 'MANUAL'::text])))
 );
 
 
+ALTER TABLE kost.room_amenities OWNER TO postgres;
+
 --
--- Name: room_amenities_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: room_amenities_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.room_amenities_id_seq
@@ -681,15 +796,17 @@ CREATE SEQUENCE kost.room_amenities_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.room_amenities_id_seq OWNER TO postgres;
+
 --
--- Name: room_amenities_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: room_amenities_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.room_amenities_id_seq OWNED BY kost.room_amenities.id;
 
 
 --
--- Name: room_types; Type: TABLE; Schema: kost; Owner: -
+-- Name: room_types; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.room_types (
@@ -711,6 +828,7 @@ CREATE TABLE kost.room_types (
     is_active boolean DEFAULT true NOT NULL,
     notes text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT chk_room_types_bathroom_location CHECK ((bathroom_location = ANY (ARRAY['INSIDE'::text, 'OUTSIDE'::text]))),
     CONSTRAINT chk_room_types_bathroom_size_logic CHECK (((bathroom_location = 'INSIDE'::text) OR ((bathroom_width_m IS NULL) AND (bathroom_length_m IS NULL)))),
     CONSTRAINT chk_room_types_bed_size_range CHECK (((bed_size_cm IS NULL) OR ((bed_size_cm >= 60) AND (bed_size_cm <= 220)))),
@@ -721,8 +839,10 @@ CREATE TABLE kost.room_types (
 );
 
 
+ALTER TABLE kost.room_types OWNER TO postgres;
+
 --
--- Name: room_types_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: room_types_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.room_types_id_seq
@@ -733,15 +853,17 @@ CREATE SEQUENCE kost.room_types_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.room_types_id_seq OWNER TO postgres;
+
 --
--- Name: room_types_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: room_types_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.room_types_id_seq OWNED BY kost.room_types.id;
 
 
 --
--- Name: rooms; Type: TABLE; Schema: kost; Owner: -
+-- Name: rooms; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.rooms (
@@ -760,8 +882,10 @@ CREATE TABLE kost.rooms (
 );
 
 
+ALTER TABLE kost.rooms OWNER TO postgres;
+
 --
--- Name: rooms_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: rooms_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.rooms_id_seq
@@ -772,15 +896,17 @@ CREATE SEQUENCE kost.rooms_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.rooms_id_seq OWNER TO postgres;
+
 --
--- Name: rooms_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: rooms_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.rooms_id_seq OWNED BY kost.rooms.id;
 
 
 --
--- Name: stays; Type: TABLE; Schema: kost; Owner: -
+-- Name: stays; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.stays (
@@ -827,8 +953,10 @@ CREATE TABLE kost.stays (
 );
 
 
+ALTER TABLE kost.stays OWNER TO postgres;
+
 --
--- Name: stays_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: stays_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.stays_id_seq
@@ -839,15 +967,17 @@ CREATE SEQUENCE kost.stays_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.stays_id_seq OWNER TO postgres;
+
 --
--- Name: stays_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: stays_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.stays_id_seq OWNED BY kost.stays.id;
 
 
 --
--- Name: tenant_credits; Type: TABLE; Schema: kost; Owner: -
+-- Name: tenant_credits; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.tenant_credits (
@@ -858,8 +988,10 @@ CREATE TABLE kost.tenant_credits (
 );
 
 
+ALTER TABLE kost.tenant_credits OWNER TO postgres;
+
 --
--- Name: tenant_deposits; Type: TABLE; Schema: kost; Owner: -
+-- Name: tenant_deposits; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.tenant_deposits (
@@ -882,8 +1014,10 @@ CREATE TABLE kost.tenant_deposits (
 );
 
 
+ALTER TABLE kost.tenant_deposits OWNER TO postgres;
+
 --
--- Name: tenant_deposits_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: tenant_deposits_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.tenant_deposits_id_seq
@@ -894,15 +1028,17 @@ CREATE SEQUENCE kost.tenant_deposits_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.tenant_deposits_id_seq OWNER TO postgres;
+
 --
--- Name: tenant_deposits_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: tenant_deposits_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.tenant_deposits_id_seq OWNED BY kost.tenant_deposits.id;
 
 
 --
--- Name: tenants; Type: TABLE; Schema: kost; Owner: -
+-- Name: tenants; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.tenants (
@@ -932,8 +1068,10 @@ CREATE TABLE kost.tenants (
 );
 
 
+ALTER TABLE kost.tenants OWNER TO postgres;
+
 --
--- Name: tenants_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: tenants_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.tenants_id_seq
@@ -944,15 +1082,17 @@ CREATE SEQUENCE kost.tenants_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.tenants_id_seq OWNER TO postgres;
+
 --
--- Name: tenants_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: tenants_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.tenants_id_seq OWNED BY kost.tenants.id;
 
 
 --
--- Name: ticket_attachments; Type: TABLE; Schema: kost; Owner: -
+-- Name: ticket_attachments; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.ticket_attachments (
@@ -969,8 +1109,10 @@ CREATE TABLE kost.ticket_attachments (
 );
 
 
+ALTER TABLE kost.ticket_attachments OWNER TO postgres;
+
 --
--- Name: ticket_attachments_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: ticket_attachments_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.ticket_attachments_id_seq
@@ -981,15 +1123,17 @@ CREATE SEQUENCE kost.ticket_attachments_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.ticket_attachments_id_seq OWNER TO postgres;
+
 --
--- Name: ticket_attachments_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: ticket_attachments_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.ticket_attachments_id_seq OWNED BY kost.ticket_attachments.id;
 
 
 --
--- Name: ticket_messages; Type: TABLE; Schema: kost; Owner: -
+-- Name: ticket_messages; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.ticket_messages (
@@ -1005,8 +1149,10 @@ CREATE TABLE kost.ticket_messages (
 );
 
 
+ALTER TABLE kost.ticket_messages OWNER TO postgres;
+
 --
--- Name: ticket_messages_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: ticket_messages_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.ticket_messages_id_seq
@@ -1017,15 +1163,17 @@ CREATE SEQUENCE kost.ticket_messages_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.ticket_messages_id_seq OWNER TO postgres;
+
 --
--- Name: ticket_messages_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: ticket_messages_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.ticket_messages_id_seq OWNED BY kost.ticket_messages.id;
 
 
 --
--- Name: tickets; Type: TABLE; Schema: kost; Owner: -
+-- Name: tickets; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.tickets (
@@ -1049,8 +1197,10 @@ CREATE TABLE kost.tickets (
 );
 
 
+ALTER TABLE kost.tickets OWNER TO postgres;
+
 --
--- Name: tickets_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: tickets_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.tickets_id_seq
@@ -1061,15 +1211,17 @@ CREATE SEQUENCE kost.tickets_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.tickets_id_seq OWNER TO postgres;
+
 --
--- Name: tickets_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: tickets_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.tickets_id_seq OWNED BY kost.tickets.id;
 
 
 --
--- Name: users; Type: TABLE; Schema: kost; Owner: -
+-- Name: users; Type: TABLE; Schema: kost; Owner: postgres
 --
 
 CREATE TABLE kost.users (
@@ -1083,8 +1235,10 @@ CREATE TABLE kost.users (
 );
 
 
+ALTER TABLE kost.users OWNER TO postgres;
+
 --
--- Name: users_id_seq; Type: SEQUENCE; Schema: kost; Owner: -
+-- Name: users_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
 --
 
 CREATE SEQUENCE kost.users_id_seq
@@ -1095,15 +1249,17 @@ CREATE SEQUENCE kost.users_id_seq
     CACHE 1;
 
 
+ALTER SEQUENCE kost.users_id_seq OWNER TO postgres;
+
 --
--- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: -
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
 --
 
 ALTER SEQUENCE kost.users_id_seq OWNED BY kost.users.id;
 
 
 --
--- Name: v_electricity_tariff_current; Type: VIEW; Schema: kost; Owner: -
+-- Name: v_electricity_tariff_current; Type: VIEW; Schema: kost; Owner: postgres
 --
 
 CREATE VIEW kost.v_electricity_tariff_current AS
@@ -1117,8 +1273,10 @@ CREATE VIEW kost.v_electricity_tariff_current AS
  LIMIT 1;
 
 
+ALTER VIEW kost.v_electricity_tariff_current OWNER TO postgres;
+
 --
--- Name: v_electricity_tariffs; Type: VIEW; Schema: kost; Owner: -
+-- Name: v_electricity_tariffs; Type: VIEW; Schema: kost; Owner: postgres
 --
 
 CREATE VIEW kost.v_electricity_tariffs AS
@@ -1128,8 +1286,10 @@ CREATE VIEW kost.v_electricity_tariffs AS
   ORDER BY effective_from DESC;
 
 
+ALTER VIEW kost.v_electricity_tariffs OWNER TO postgres;
+
 --
--- Name: v_invoice_electricity_debug; Type: VIEW; Schema: kost; Owner: -
+-- Name: v_invoice_electricity_debug; Type: VIEW; Schema: kost; Owner: postgres
 --
 
 CREATE VIEW kost.v_invoice_electricity_debug AS
@@ -1149,190 +1309,219 @@ CREATE VIEW kost.v_invoice_electricity_debug AS
      LEFT JOIN kost.invoice_electricity ie ON ((ie.invoice_id = i.id)));
 
 
+ALTER VIEW kost.v_invoice_electricity_debug OWNER TO postgres;
+
 --
--- Name: amenities id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: v_rooms_admin; Type: VIEW; Schema: kost; Owner: postgres
+--
+
+CREATE VIEW kost.v_rooms_admin AS
+ SELECT r.id,
+    r.code,
+    r.floor,
+    r.position_zone,
+    r.status,
+    r.notes,
+    r.created_at,
+    r.updated_at,
+    rt.id AS room_type_id,
+    rt.code AS room_type_code,
+    rt.name AS room_type_name,
+    rt.base_monthly_price,
+    (s.id IS NOT NULL) AS is_occupied,
+    s.tenant_id AS active_tenant_id,
+    s.check_in_at AS active_check_in_at
+   FROM ((kost.rooms r
+     JOIN kost.room_types rt ON ((rt.id = r.room_type_id)))
+     LEFT JOIN kost.stays s ON (((s.room_id = r.id) AND (s.status = 'ACTIVE'::text))));
+
+
+ALTER VIEW kost.v_rooms_admin OWNER TO postgres;
+
+--
+-- Name: amenities id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.amenities ALTER COLUMN id SET DEFAULT nextval('kost.amenities_id_seq'::regclass);
 
 
 --
--- Name: announcement_ack id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: announcement_ack id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.announcement_ack ALTER COLUMN id SET DEFAULT nextval('kost.announcement_ack_id_seq'::regclass);
 
 
 --
--- Name: announcements id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: announcements id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.announcements ALTER COLUMN id SET DEFAULT nextval('kost.announcements_id_seq'::regclass);
 
 
 --
--- Name: common_amenities id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: common_amenities id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.common_amenities ALTER COLUMN id SET DEFAULT nextval('kost.common_amenities_id_seq'::regclass);
 
 
 --
--- Name: credit_applications id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: credit_applications id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.credit_applications ALTER COLUMN id SET DEFAULT nextval('kost.credit_applications_id_seq'::regclass);
 
 
 --
--- Name: credit_movements id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: credit_movements id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.credit_movements ALTER COLUMN id SET DEFAULT nextval('kost.credit_movements_id_seq'::regclass);
 
 
 --
--- Name: deposit_movements id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: deposit_movements id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.deposit_movements ALTER COLUMN id SET DEFAULT nextval('kost.deposit_movements_id_seq'::regclass);
 
 
 --
--- Name: electricity_tariffs id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: electricity_tariffs id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.electricity_tariffs ALTER COLUMN id SET DEFAULT nextval('kost.electricity_tariffs_id_seq'::regclass);
 
 
 --
--- Name: invoice_electricity id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: invoice_electricity id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_electricity ALTER COLUMN id SET DEFAULT nextval('kost.invoice_electricity_id_seq'::regclass);
 
 
 --
--- Name: invoice_items id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: invoice_items id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_items ALTER COLUMN id SET DEFAULT nextval('kost.invoice_items_id_seq'::regclass);
 
 
 --
--- Name: invoice_status_history id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: invoice_status_history id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_status_history ALTER COLUMN id SET DEFAULT nextval('kost.invoice_status_history_id_seq'::regclass);
 
 
 --
--- Name: invoices id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: invoices id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoices ALTER COLUMN id SET DEFAULT nextval('kost.invoices_id_seq'::regclass);
 
 
 --
--- Name: meter_readings id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: meter_readings id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.meter_readings ALTER COLUMN id SET DEFAULT nextval('kost.meter_readings_id_seq'::regclass);
 
 
 --
--- Name: payment_submission_files id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: payment_submission_files id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_submission_files ALTER COLUMN id SET DEFAULT nextval('kost.payment_submission_files_id_seq'::regclass);
 
 
 --
--- Name: payment_submissions id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: payment_submissions id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_submissions ALTER COLUMN id SET DEFAULT nextval('kost.payment_submissions_id_seq'::regclass);
 
 
 --
--- Name: payment_verifications id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: payment_verifications id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_verifications ALTER COLUMN id SET DEFAULT nextval('kost.payment_verifications_id_seq'::regclass);
 
 
 --
--- Name: room_amenities id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: room_amenities id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.room_amenities ALTER COLUMN id SET DEFAULT nextval('kost.room_amenities_id_seq'::regclass);
 
 
 --
--- Name: room_types id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: room_types id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.room_types ALTER COLUMN id SET DEFAULT nextval('kost.room_types_id_seq'::regclass);
 
 
 --
--- Name: rooms id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: rooms id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.rooms ALTER COLUMN id SET DEFAULT nextval('kost.rooms_id_seq'::regclass);
 
 
 --
--- Name: stays id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: stays id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.stays ALTER COLUMN id SET DEFAULT nextval('kost.stays_id_seq'::regclass);
 
 
 --
--- Name: tenant_deposits id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: tenant_deposits id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tenant_deposits ALTER COLUMN id SET DEFAULT nextval('kost.tenant_deposits_id_seq'::regclass);
 
 
 --
--- Name: tenants id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: tenants id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tenants ALTER COLUMN id SET DEFAULT nextval('kost.tenants_id_seq'::regclass);
 
 
 --
--- Name: ticket_attachments id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: ticket_attachments id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.ticket_attachments ALTER COLUMN id SET DEFAULT nextval('kost.ticket_attachments_id_seq'::regclass);
 
 
 --
--- Name: ticket_messages id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: ticket_messages id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.ticket_messages ALTER COLUMN id SET DEFAULT nextval('kost.ticket_messages_id_seq'::regclass);
 
 
 --
--- Name: tickets id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: tickets id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tickets ALTER COLUMN id SET DEFAULT nextval('kost.tickets_id_seq'::regclass);
 
 
 --
--- Name: users id; Type: DEFAULT; Schema: kost; Owner: -
+-- Name: users id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.users ALTER COLUMN id SET DEFAULT nextval('kost.users_id_seq'::regclass);
 
 
 --
--- Name: amenities amenities_code_key; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: amenities amenities_code_key; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.amenities
@@ -1340,7 +1529,7 @@ ALTER TABLE ONLY kost.amenities
 
 
 --
--- Name: amenities amenities_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: amenities amenities_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.amenities
@@ -1348,7 +1537,7 @@ ALTER TABLE ONLY kost.amenities
 
 
 --
--- Name: announcement_ack announcement_ack_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: announcement_ack announcement_ack_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.announcement_ack
@@ -1356,7 +1545,7 @@ ALTER TABLE ONLY kost.announcement_ack
 
 
 --
--- Name: announcements announcements_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: announcements announcements_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.announcements
@@ -1364,7 +1553,7 @@ ALTER TABLE ONLY kost.announcements
 
 
 --
--- Name: common_amenities common_amenities_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: common_amenities common_amenities_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.common_amenities
@@ -1372,7 +1561,7 @@ ALTER TABLE ONLY kost.common_amenities
 
 
 --
--- Name: credit_applications credit_applications_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: credit_applications credit_applications_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.credit_applications
@@ -1380,7 +1569,7 @@ ALTER TABLE ONLY kost.credit_applications
 
 
 --
--- Name: credit_movements credit_movements_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: credit_movements credit_movements_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.credit_movements
@@ -1388,7 +1577,7 @@ ALTER TABLE ONLY kost.credit_movements
 
 
 --
--- Name: deposit_movements deposit_movements_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: deposit_movements deposit_movements_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.deposit_movements
@@ -1396,7 +1585,7 @@ ALTER TABLE ONLY kost.deposit_movements
 
 
 --
--- Name: electricity_tariffs electricity_tariffs_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: electricity_tariffs electricity_tariffs_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.electricity_tariffs
@@ -1404,7 +1593,7 @@ ALTER TABLE ONLY kost.electricity_tariffs
 
 
 --
--- Name: invoice_electricity invoice_electricity_invoice_id_key; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_electricity invoice_electricity_invoice_id_key; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_electricity
@@ -1412,7 +1601,7 @@ ALTER TABLE ONLY kost.invoice_electricity
 
 
 --
--- Name: invoice_electricity invoice_electricity_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_electricity invoice_electricity_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_electricity
@@ -1420,7 +1609,7 @@ ALTER TABLE ONLY kost.invoice_electricity
 
 
 --
--- Name: invoice_items invoice_items_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_items invoice_items_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_items
@@ -1428,7 +1617,7 @@ ALTER TABLE ONLY kost.invoice_items
 
 
 --
--- Name: invoice_status_history invoice_status_history_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_status_history invoice_status_history_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_status_history
@@ -1436,7 +1625,7 @@ ALTER TABLE ONLY kost.invoice_status_history
 
 
 --
--- Name: invoices invoices_invoice_number_key; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoices invoices_invoice_number_key; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoices
@@ -1444,7 +1633,7 @@ ALTER TABLE ONLY kost.invoices
 
 
 --
--- Name: invoices invoices_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoices invoices_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoices
@@ -1452,7 +1641,7 @@ ALTER TABLE ONLY kost.invoices
 
 
 --
--- Name: meter_readings meter_readings_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: meter_readings meter_readings_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.meter_readings
@@ -1460,7 +1649,7 @@ ALTER TABLE ONLY kost.meter_readings
 
 
 --
--- Name: payment_submission_files payment_submission_files_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: payment_submission_files payment_submission_files_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_submission_files
@@ -1468,7 +1657,7 @@ ALTER TABLE ONLY kost.payment_submission_files
 
 
 --
--- Name: payment_submissions payment_submissions_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: payment_submissions payment_submissions_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_submissions
@@ -1476,7 +1665,7 @@ ALTER TABLE ONLY kost.payment_submissions
 
 
 --
--- Name: payment_verifications payment_verifications_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: payment_verifications payment_verifications_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_verifications
@@ -1484,7 +1673,7 @@ ALTER TABLE ONLY kost.payment_verifications
 
 
 --
--- Name: room_amenities room_amenities_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: room_amenities room_amenities_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.room_amenities
@@ -1492,7 +1681,7 @@ ALTER TABLE ONLY kost.room_amenities
 
 
 --
--- Name: room_types room_types_code_key; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: room_types room_types_code_key; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.room_types
@@ -1500,7 +1689,7 @@ ALTER TABLE ONLY kost.room_types
 
 
 --
--- Name: room_types room_types_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: room_types room_types_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.room_types
@@ -1508,7 +1697,7 @@ ALTER TABLE ONLY kost.room_types
 
 
 --
--- Name: rooms rooms_code_key; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: rooms rooms_code_key; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.rooms
@@ -1516,7 +1705,7 @@ ALTER TABLE ONLY kost.rooms
 
 
 --
--- Name: rooms rooms_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: rooms rooms_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.rooms
@@ -1524,7 +1713,7 @@ ALTER TABLE ONLY kost.rooms
 
 
 --
--- Name: stays stays_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: stays stays_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.stays
@@ -1532,7 +1721,7 @@ ALTER TABLE ONLY kost.stays
 
 
 --
--- Name: tenant_credits tenant_credits_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: tenant_credits tenant_credits_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tenant_credits
@@ -1540,7 +1729,7 @@ ALTER TABLE ONLY kost.tenant_credits
 
 
 --
--- Name: tenant_deposits tenant_deposits_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: tenant_deposits tenant_deposits_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tenant_deposits
@@ -1548,7 +1737,7 @@ ALTER TABLE ONLY kost.tenant_deposits
 
 
 --
--- Name: tenants tenants_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: tenants tenants_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tenants
@@ -1556,7 +1745,7 @@ ALTER TABLE ONLY kost.tenants
 
 
 --
--- Name: ticket_attachments ticket_attachments_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: ticket_attachments ticket_attachments_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.ticket_attachments
@@ -1564,7 +1753,7 @@ ALTER TABLE ONLY kost.ticket_attachments
 
 
 --
--- Name: ticket_messages ticket_messages_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: ticket_messages ticket_messages_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.ticket_messages
@@ -1572,7 +1761,7 @@ ALTER TABLE ONLY kost.ticket_messages
 
 
 --
--- Name: tickets tickets_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: tickets tickets_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tickets
@@ -1580,7 +1769,15 @@ ALTER TABLE ONLY kost.tickets
 
 
 --
--- Name: announcement_ack uniq_announcement_ack; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: amenities uniq_amenities_code; Type: CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.amenities
+    ADD CONSTRAINT uniq_amenities_code UNIQUE (code);
+
+
+--
+-- Name: announcement_ack uniq_announcement_ack; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.announcement_ack
@@ -1588,7 +1785,7 @@ ALTER TABLE ONLY kost.announcement_ack
 
 
 --
--- Name: electricity_tariffs uniq_electricity_tariffs_effective_from; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: electricity_tariffs uniq_electricity_tariffs_effective_from; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.electricity_tariffs
@@ -1596,7 +1793,7 @@ ALTER TABLE ONLY kost.electricity_tariffs
 
 
 --
--- Name: payment_submission_files uniq_payment_submission_files; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: payment_submission_files uniq_payment_submission_files; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_submission_files
@@ -1604,7 +1801,7 @@ ALTER TABLE ONLY kost.payment_submission_files
 
 
 --
--- Name: room_amenities uniq_room_amenities_room_amenity; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: room_amenities uniq_room_amenities_room_amenity; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.room_amenities
@@ -1612,7 +1809,23 @@ ALTER TABLE ONLY kost.room_amenities
 
 
 --
--- Name: users users_pkey; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: room_types uniq_room_types_code; Type: CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.room_types
+    ADD CONSTRAINT uniq_room_types_code UNIQUE (code);
+
+
+--
+-- Name: rooms uniq_rooms_code; Type: CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.rooms
+    ADD CONSTRAINT uniq_rooms_code UNIQUE (code);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.users
@@ -1620,7 +1833,7 @@ ALTER TABLE ONLY kost.users
 
 
 --
--- Name: users users_username_key; Type: CONSTRAINT; Schema: kost; Owner: -
+-- Name: users users_username_key; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.users
@@ -1628,581 +1841,602 @@ ALTER TABLE ONLY kost.users
 
 
 --
--- Name: idx_amenities_category; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_amenities_category; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_amenities_category ON kost.amenities USING btree (category);
 
 
 --
--- Name: idx_amenities_is_active; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_amenities_is_active; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_amenities_is_active ON kost.amenities USING btree (is_active);
 
 
 --
--- Name: idx_announcement_ack_announcement_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_announcement_ack_announcement_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_announcement_ack_announcement_id ON kost.announcement_ack USING btree (announcement_id);
 
 
 --
--- Name: idx_announcement_ack_tenant_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_announcement_ack_tenant_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_announcement_ack_tenant_id ON kost.announcement_ack USING btree (tenant_id);
 
 
 --
--- Name: idx_announcements_active_window; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_announcements_active_window; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_announcements_active_window ON kost.announcements USING btree (starts_at, expires_at);
 
 
 --
--- Name: idx_announcements_pinned_created_at; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_announcements_pinned_created_at; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_announcements_pinned_created_at ON kost.announcements USING btree (is_pinned DESC, created_at DESC);
 
 
 --
--- Name: idx_common_amenities_amenity_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_common_amenities_amenity_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_common_amenities_amenity_id ON kost.common_amenities USING btree (amenity_id);
 
 
 --
--- Name: idx_credit_applications_applied_at; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_credit_applications_applied_at; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_credit_applications_applied_at ON kost.credit_applications USING btree (applied_at DESC);
 
 
 --
--- Name: idx_credit_applications_invoice_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_credit_applications_invoice_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_credit_applications_invoice_id ON kost.credit_applications USING btree (invoice_id);
 
 
 --
--- Name: idx_credit_applications_tenant_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_credit_applications_tenant_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_credit_applications_tenant_id ON kost.credit_applications USING btree (tenant_id);
 
 
 --
--- Name: idx_credit_movements_tenant_time; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_credit_movements_tenant_time; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_credit_movements_tenant_time ON kost.credit_movements USING btree (tenant_id, created_at DESC);
 
 
 --
--- Name: idx_credit_movements_type_time; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_credit_movements_type_time; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_credit_movements_type_time ON kost.credit_movements USING btree (movement_type, created_at DESC);
 
 
 --
--- Name: idx_deposit_movements_deposit_time; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_deposit_movements_deposit_time; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_deposit_movements_deposit_time ON kost.deposit_movements USING btree (tenant_deposit_id, created_at DESC);
 
 
 --
--- Name: idx_electricity_tariffs_effective_from; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_electricity_tariffs_effective_from; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_electricity_tariffs_effective_from ON kost.electricity_tariffs USING btree (effective_from DESC);
 
 
 --
--- Name: idx_invoice_electricity_room_period; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_invoice_electricity_room_period; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_invoice_electricity_room_period ON kost.invoice_electricity USING btree (room_id, period_start);
 
 
 --
--- Name: idx_invoice_items_invoice_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_invoice_items_invoice_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_invoice_items_invoice_id ON kost.invoice_items USING btree (invoice_id);
 
 
 --
--- Name: idx_invoice_items_invoice_type; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_invoice_items_invoice_type; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_invoice_items_invoice_type ON kost.invoice_items USING btree (invoice_id, item_type);
 
 
 --
--- Name: idx_invoice_items_type; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_invoice_items_type; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_invoice_items_type ON kost.invoice_items USING btree (item_type);
 
 
 --
--- Name: idx_invoice_status_history_invoice_time; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_invoice_status_history_invoice_time; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_invoice_status_history_invoice_time ON kost.invoice_status_history USING btree (invoice_id, changed_at DESC);
 
 
 --
--- Name: idx_invoices_due_date_status; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_invoices_due_date_status; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_invoices_due_date_status ON kost.invoices USING btree (due_date, status);
 
 
 --
--- Name: idx_invoices_open_due_date; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_invoices_open_due_date; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_invoices_open_due_date ON kost.invoices USING btree (due_date) WHERE ((status)::text = ANY ((ARRAY['ISSUED'::character varying, 'OVERDUE'::character varying, 'UNDERPAID'::character varying, 'PARTIAL'::character varying])::text[]));
 
 
 --
--- Name: idx_invoices_period; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_invoices_period; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_invoices_period ON kost.invoices USING btree (period_start, period_end);
 
 
 --
--- Name: idx_invoices_stay_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_invoices_stay_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_invoices_stay_id ON kost.invoices USING btree (stay_id);
 
 
 --
--- Name: idx_invoices_stay_period_start_desc; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_invoices_stay_period_start_desc; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_invoices_stay_period_start_desc ON kost.invoices USING btree (stay_id, period_start DESC);
 
 
 --
--- Name: idx_invoices_stay_status_due; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_invoices_stay_status_due; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_invoices_stay_status_due ON kost.invoices USING btree (stay_id, status, due_date);
 
 
 --
--- Name: idx_meter_readings_room_time; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_meter_readings_room_time; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_meter_readings_room_time ON kost.meter_readings USING btree (room_id, reading_at DESC);
 
 
 --
--- Name: idx_payment_submission_files_storage_key; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_payment_submission_files_storage_key; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_payment_submission_files_storage_key ON kost.payment_submission_files USING btree (storage_key);
 
 
 --
--- Name: idx_payment_submission_files_submission_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_payment_submission_files_submission_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_payment_submission_files_submission_id ON kost.payment_submission_files USING btree (submission_id);
 
 
 --
--- Name: idx_payment_submissions_invoice_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_payment_submissions_invoice_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_payment_submissions_invoice_id ON kost.payment_submissions USING btree (invoice_id);
 
 
 --
--- Name: idx_payment_submissions_invoice_status_time; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_payment_submissions_invoice_status_time; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_payment_submissions_invoice_status_time ON kost.payment_submissions USING btree (invoice_id, status, created_at DESC);
 
 
 --
--- Name: idx_payment_submissions_status_created_at; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_payment_submissions_status_created_at; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_payment_submissions_status_created_at ON kost.payment_submissions USING btree (status, created_at DESC);
 
 
 --
--- Name: idx_payment_verifications_result; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_payment_verifications_result; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_payment_verifications_result ON kost.payment_verifications USING btree (result);
 
 
 --
--- Name: idx_payment_verifications_verified_at; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_payment_verifications_verified_at; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_payment_verifications_verified_at ON kost.payment_verifications USING btree (verified_at DESC);
 
 
 --
--- Name: idx_room_amenities_amenity_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_room_amenities_amenity_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_room_amenities_amenity_id ON kost.room_amenities USING btree (amenity_id);
 
 
 --
--- Name: idx_room_amenities_room_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_room_amenities_room_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_room_amenities_room_id ON kost.room_amenities USING btree (room_id);
 
 
 --
--- Name: idx_room_types_is_active; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_room_types_is_active; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_room_types_is_active ON kost.room_types USING btree (is_active);
 
 
 --
--- Name: idx_room_types_is_capsule; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_room_types_is_capsule; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_room_types_is_capsule ON kost.room_types USING btree (is_capsule);
 
 
 --
--- Name: idx_rooms_floor; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_rooms_floor; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_rooms_floor ON kost.rooms USING btree (floor);
 
 
 --
--- Name: idx_rooms_position_zone; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_rooms_position_zone; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_rooms_position_zone ON kost.rooms USING btree (position_zone);
 
 
 --
--- Name: idx_rooms_room_type_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_rooms_room_type_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_rooms_room_type_id ON kost.rooms USING btree (room_type_id);
 
 
 --
--- Name: idx_rooms_status; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_rooms_status; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_rooms_status ON kost.rooms USING btree (status);
 
 
 --
--- Name: idx_stays_active_room_checkin; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_stays_active_room_checkin; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_stays_active_room_checkin ON kost.stays USING btree (room_id, check_in_at) WHERE (status = 'ACTIVE'::text);
 
 
 --
--- Name: idx_stays_active_tenant_checkin; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_stays_active_tenant_checkin; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_stays_active_tenant_checkin ON kost.stays USING btree (tenant_id, check_in_at) WHERE (status = 'ACTIVE'::text);
 
 
 --
--- Name: idx_stays_check_in; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_stays_check_in; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_stays_check_in ON kost.stays USING btree (check_in_at);
 
 
 --
--- Name: idx_stays_checkin; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_stays_checkin; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_stays_checkin ON kost.stays USING btree (check_in_at DESC);
 
 
 --
--- Name: idx_stays_monthly_active_anchor; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_stays_monthly_active_anchor; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_stays_monthly_active_anchor ON kost.stays USING btree (billing_anchor_day, check_in_at) WHERE ((status = 'ACTIVE'::text) AND (rent_period = 'MONTHLY'::text));
 
 
 --
--- Name: idx_stays_room_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_stays_room_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_stays_room_id ON kost.stays USING btree (room_id);
 
 
 --
--- Name: idx_stays_status_checkin; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_stays_status_checkin; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_stays_status_checkin ON kost.stays USING btree (status, check_in_at DESC);
 
 
 --
--- Name: idx_stays_tenant_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_stays_tenant_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_stays_tenant_id ON kost.stays USING btree (tenant_id);
 
 
 --
--- Name: idx_tenant_credits_balance; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tenant_credits_balance; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tenant_credits_balance ON kost.tenant_credits USING btree (balance);
 
 
 --
--- Name: idx_tenant_deposits_status; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tenant_deposits_status; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tenant_deposits_status ON kost.tenant_deposits USING btree (status);
 
 
 --
--- Name: idx_tenant_deposits_stay_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tenant_deposits_stay_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tenant_deposits_stay_id ON kost.tenant_deposits USING btree (stay_id);
 
 
 --
--- Name: idx_tenant_deposits_tenant_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tenant_deposits_tenant_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tenant_deposits_tenant_id ON kost.tenant_deposits USING btree (tenant_id);
 
 
 --
--- Name: idx_tenants_full_name; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tenants_full_name; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tenants_full_name ON kost.tenants USING btree (full_name);
 
 
 --
--- Name: idx_tenants_occupation; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tenants_occupation; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tenants_occupation ON kost.tenants USING btree (occupation);
 
 
 --
--- Name: idx_tenants_phone; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tenants_phone; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tenants_phone ON kost.tenants USING btree (phone);
 
 
 --
--- Name: idx_tenants_stay_purpose; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tenants_stay_purpose; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tenants_stay_purpose ON kost.tenants USING btree (stay_purpose);
 
 
 --
--- Name: idx_ticket_attachments_message_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_ticket_attachments_message_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_ticket_attachments_message_id ON kost.ticket_attachments USING btree (message_id);
 
 
 --
--- Name: idx_ticket_attachments_storage_key; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_ticket_attachments_storage_key; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_ticket_attachments_storage_key ON kost.ticket_attachments USING btree (storage_key);
 
 
 --
--- Name: idx_ticket_attachments_ticket_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_ticket_attachments_ticket_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_ticket_attachments_ticket_id ON kost.ticket_attachments USING btree (ticket_id);
 
 
 --
--- Name: idx_ticket_messages_ticket_id_created_at; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_ticket_messages_ticket_id_created_at; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_ticket_messages_ticket_id_created_at ON kost.ticket_messages USING btree (ticket_id, created_at);
 
 
 --
--- Name: idx_tickets_assigned_to_status; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tickets_assigned_to_status; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tickets_assigned_to_status ON kost.tickets USING btree (assigned_to, status);
 
 
 --
--- Name: idx_tickets_category; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tickets_category; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tickets_category ON kost.tickets USING btree (category);
 
 
 --
--- Name: idx_tickets_status_updated_at; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tickets_status_updated_at; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tickets_status_updated_at ON kost.tickets USING btree (status, updated_at DESC);
 
 
 --
--- Name: idx_tickets_tenant_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_tickets_tenant_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_tickets_tenant_id ON kost.tickets USING btree (tenant_id);
 
 
 --
--- Name: idx_users_is_active; Type: INDEX; Schema: kost; Owner: -
+-- Name: idx_users_is_active; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE INDEX idx_users_is_active ON kost.users USING btree (is_active);
 
 
 --
--- Name: uniq_invoice_items_deposit_per_invoice; Type: INDEX; Schema: kost; Owner: -
+-- Name: uniq_invoice_items_deposit_per_invoice; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE UNIQUE INDEX uniq_invoice_items_deposit_per_invoice ON kost.invoice_items USING btree (invoice_id) WHERE ((item_type)::text = 'DEPOSIT'::text);
 
 
 --
--- Name: uniq_invoice_items_electric_overage_per_invoice; Type: INDEX; Schema: kost; Owner: -
+-- Name: uniq_invoice_items_electric_overage_per_invoice; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE UNIQUE INDEX uniq_invoice_items_electric_overage_per_invoice ON kost.invoice_items USING btree (invoice_id) WHERE ((item_type)::text = 'ELECTRIC_OVERAGE'::text);
 
 
 --
--- Name: uniq_invoice_items_rent_per_invoice; Type: INDEX; Schema: kost; Owner: -
+-- Name: uniq_invoice_items_rent_per_invoice; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE UNIQUE INDEX uniq_invoice_items_rent_per_invoice ON kost.invoice_items USING btree (invoice_id) WHERE ((item_type)::text = 'RENT'::text);
 
 
 --
--- Name: uniq_invoices_stay_period; Type: INDEX; Schema: kost; Owner: -
+-- Name: uniq_invoices_stay_period; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE UNIQUE INDEX uniq_invoices_stay_period ON kost.invoices USING btree (stay_id, period_start, period_end);
 
 
 --
--- Name: uniq_meter_readings_room_reading_at; Type: INDEX; Schema: kost; Owner: -
+-- Name: uniq_meter_readings_room_reading_at; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE UNIQUE INDEX uniq_meter_readings_room_reading_at ON kost.meter_readings USING btree (room_id, reading_at);
 
 
 --
--- Name: uniq_payment_verifications_submission_id; Type: INDEX; Schema: kost; Owner: -
+-- Name: uniq_payment_verifications_submission_id; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE UNIQUE INDEX uniq_payment_verifications_submission_id ON kost.payment_verifications USING btree (submission_id);
 
 
 --
--- Name: uniq_stays_active_room; Type: INDEX; Schema: kost; Owner: -
+-- Name: uniq_stays_active_room; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE UNIQUE INDEX uniq_stays_active_room ON kost.stays USING btree (room_id) WHERE (status = 'ACTIVE'::text);
 
 
 --
--- Name: uniq_ticket_attachments_ticket_file_message; Type: INDEX; Schema: kost; Owner: -
+-- Name: uniq_ticket_attachments_ticket_file_message; Type: INDEX; Schema: kost; Owner: postgres
 --
 
 CREATE UNIQUE INDEX uniq_ticket_attachments_ticket_file_message ON kost.ticket_attachments USING btree (ticket_id, file_id, COALESCE(message_id, (0)::bigint));
 
 
 --
--- Name: announcements trg_announcements_set_updated_at; Type: TRIGGER; Schema: kost; Owner: -
+-- Name: ux_kost_invoice_items_singleton; Type: INDEX; Schema: kost; Owner: postgres
+--
+
+CREATE UNIQUE INDEX ux_kost_invoice_items_singleton ON kost.invoice_items USING btree (invoice_id, item_type) WHERE ((item_type)::text = ANY ((ARRAY['RENT'::character varying, 'DEPOSIT'::character varying])::text[]));
+
+
+--
+-- Name: announcements trg_announcements_set_updated_at; Type: TRIGGER; Schema: kost; Owner: postgres
 --
 
 CREATE TRIGGER trg_announcements_set_updated_at BEFORE UPDATE ON kost.announcements FOR EACH ROW EXECUTE FUNCTION kost.set_updated_at();
 
 
 --
--- Name: invoices trg_invoices_set_updated_at; Type: TRIGGER; Schema: kost; Owner: -
+-- Name: invoices trg_invoices_set_updated_at; Type: TRIGGER; Schema: kost; Owner: postgres
 --
 
 CREATE TRIGGER trg_invoices_set_updated_at BEFORE UPDATE ON kost.invoices FOR EACH ROW EXECUTE FUNCTION kost.set_updated_at();
 
 
 --
--- Name: payment_submissions trg_payment_submissions_set_updated_at; Type: TRIGGER; Schema: kost; Owner: -
+-- Name: invoice_items trg_kost_invoice_items_recompute_total; Type: TRIGGER; Schema: kost; Owner: postgres
+--
+
+CREATE TRIGGER trg_kost_invoice_items_recompute_total AFTER INSERT OR DELETE OR UPDATE ON kost.invoice_items FOR EACH ROW EXECUTE FUNCTION kost.trg_invoice_items_recompute_total();
+
+
+--
+-- Name: payment_submissions trg_payment_submissions_set_updated_at; Type: TRIGGER; Schema: kost; Owner: postgres
 --
 
 CREATE TRIGGER trg_payment_submissions_set_updated_at BEFORE UPDATE ON kost.payment_submissions FOR EACH ROW EXECUTE FUNCTION kost.set_updated_at();
 
 
 --
--- Name: rooms trg_rooms_set_updated_at; Type: TRIGGER; Schema: kost; Owner: -
+-- Name: room_types trg_room_types_set_updated_at; Type: TRIGGER; Schema: kost; Owner: postgres
+--
+
+CREATE TRIGGER trg_room_types_set_updated_at BEFORE UPDATE ON kost.room_types FOR EACH ROW EXECUTE FUNCTION kost.set_updated_at();
+
+
+--
+-- Name: rooms trg_rooms_set_updated_at; Type: TRIGGER; Schema: kost; Owner: postgres
 --
 
 CREATE TRIGGER trg_rooms_set_updated_at BEFORE UPDATE ON kost.rooms FOR EACH ROW EXECUTE FUNCTION kost.set_updated_at();
 
 
 --
--- Name: tenant_credits trg_tenant_credits_set_updated_at; Type: TRIGGER; Schema: kost; Owner: -
+-- Name: tenant_credits trg_tenant_credits_set_updated_at; Type: TRIGGER; Schema: kost; Owner: postgres
 --
 
 CREATE TRIGGER trg_tenant_credits_set_updated_at BEFORE UPDATE ON kost.tenant_credits FOR EACH ROW EXECUTE FUNCTION kost.set_updated_at();
 
 
 --
--- Name: tenant_deposits trg_tenant_deposits_set_updated_at; Type: TRIGGER; Schema: kost; Owner: -
+-- Name: tenant_deposits trg_tenant_deposits_set_updated_at; Type: TRIGGER; Schema: kost; Owner: postgres
 --
 
 CREATE TRIGGER trg_tenant_deposits_set_updated_at BEFORE UPDATE ON kost.tenant_deposits FOR EACH ROW EXECUTE FUNCTION kost.set_updated_at();
 
 
 --
--- Name: tenants trg_tenants_set_updated_at; Type: TRIGGER; Schema: kost; Owner: -
+-- Name: tenants trg_tenants_set_updated_at; Type: TRIGGER; Schema: kost; Owner: postgres
 --
 
 CREATE TRIGGER trg_tenants_set_updated_at BEFORE UPDATE ON kost.tenants FOR EACH ROW EXECUTE FUNCTION kost.set_updated_at();
 
 
 --
--- Name: tickets trg_tickets_set_updated_at; Type: TRIGGER; Schema: kost; Owner: -
+-- Name: tickets trg_tickets_set_updated_at; Type: TRIGGER; Schema: kost; Owner: postgres
 --
 
 CREATE TRIGGER trg_tickets_set_updated_at BEFORE UPDATE ON kost.tickets FOR EACH ROW EXECUTE FUNCTION kost.set_updated_at();
 
 
 --
--- Name: announcement_ack announcement_ack_announcement_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: announcement_ack announcement_ack_announcement_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.announcement_ack
@@ -2210,7 +2444,7 @@ ALTER TABLE ONLY kost.announcement_ack
 
 
 --
--- Name: announcement_ack announcement_ack_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: announcement_ack announcement_ack_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.announcement_ack
@@ -2218,7 +2452,7 @@ ALTER TABLE ONLY kost.announcement_ack
 
 
 --
--- Name: announcements announcements_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: announcements announcements_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.announcements
@@ -2226,7 +2460,7 @@ ALTER TABLE ONLY kost.announcements
 
 
 --
--- Name: announcements announcements_updated_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: announcements announcements_updated_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.announcements
@@ -2234,7 +2468,7 @@ ALTER TABLE ONLY kost.announcements
 
 
 --
--- Name: common_amenities common_amenities_amenity_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: common_amenities common_amenities_amenity_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.common_amenities
@@ -2242,7 +2476,7 @@ ALTER TABLE ONLY kost.common_amenities
 
 
 --
--- Name: credit_applications credit_applications_applied_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: credit_applications credit_applications_applied_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.credit_applications
@@ -2250,7 +2484,7 @@ ALTER TABLE ONLY kost.credit_applications
 
 
 --
--- Name: credit_applications credit_applications_invoice_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: credit_applications credit_applications_invoice_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.credit_applications
@@ -2258,7 +2492,7 @@ ALTER TABLE ONLY kost.credit_applications
 
 
 --
--- Name: credit_applications credit_applications_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: credit_applications credit_applications_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.credit_applications
@@ -2266,7 +2500,7 @@ ALTER TABLE ONLY kost.credit_applications
 
 
 --
--- Name: credit_movements credit_movements_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: credit_movements credit_movements_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.credit_movements
@@ -2274,7 +2508,7 @@ ALTER TABLE ONLY kost.credit_movements
 
 
 --
--- Name: credit_movements credit_movements_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: credit_movements credit_movements_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.credit_movements
@@ -2282,7 +2516,7 @@ ALTER TABLE ONLY kost.credit_movements
 
 
 --
--- Name: deposit_movements deposit_movements_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: deposit_movements deposit_movements_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.deposit_movements
@@ -2290,7 +2524,7 @@ ALTER TABLE ONLY kost.deposit_movements
 
 
 --
--- Name: deposit_movements deposit_movements_tenant_deposit_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: deposit_movements deposit_movements_tenant_deposit_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.deposit_movements
@@ -2298,7 +2532,7 @@ ALTER TABLE ONLY kost.deposit_movements
 
 
 --
--- Name: stays fk_stays_created_by; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: stays fk_stays_created_by; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.stays
@@ -2306,7 +2540,7 @@ ALTER TABLE ONLY kost.stays
 
 
 --
--- Name: tenants fk_tenants_created_by; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: tenants fk_tenants_created_by; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tenants
@@ -2314,7 +2548,7 @@ ALTER TABLE ONLY kost.tenants
 
 
 --
--- Name: tenants fk_tenants_updated_by; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: tenants fk_tenants_updated_by; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tenants
@@ -2322,7 +2556,7 @@ ALTER TABLE ONLY kost.tenants
 
 
 --
--- Name: invoice_electricity invoice_electricity_end_reading_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_electricity invoice_electricity_end_reading_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_electricity
@@ -2330,7 +2564,7 @@ ALTER TABLE ONLY kost.invoice_electricity
 
 
 --
--- Name: invoice_electricity invoice_electricity_invoice_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_electricity invoice_electricity_invoice_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_electricity
@@ -2338,7 +2572,7 @@ ALTER TABLE ONLY kost.invoice_electricity
 
 
 --
--- Name: invoice_electricity invoice_electricity_room_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_electricity invoice_electricity_room_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_electricity
@@ -2346,7 +2580,7 @@ ALTER TABLE ONLY kost.invoice_electricity
 
 
 --
--- Name: invoice_electricity invoice_electricity_start_reading_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_electricity invoice_electricity_start_reading_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_electricity
@@ -2354,7 +2588,7 @@ ALTER TABLE ONLY kost.invoice_electricity
 
 
 --
--- Name: invoice_items invoice_items_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_items invoice_items_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_items
@@ -2362,7 +2596,7 @@ ALTER TABLE ONLY kost.invoice_items
 
 
 --
--- Name: invoice_items invoice_items_invoice_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_items invoice_items_invoice_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_items
@@ -2370,7 +2604,7 @@ ALTER TABLE ONLY kost.invoice_items
 
 
 --
--- Name: invoice_status_history invoice_status_history_changed_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_status_history invoice_status_history_changed_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_status_history
@@ -2378,7 +2612,7 @@ ALTER TABLE ONLY kost.invoice_status_history
 
 
 --
--- Name: invoice_status_history invoice_status_history_invoice_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoice_status_history invoice_status_history_invoice_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoice_status_history
@@ -2386,7 +2620,7 @@ ALTER TABLE ONLY kost.invoice_status_history
 
 
 --
--- Name: invoices invoices_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoices invoices_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoices
@@ -2394,7 +2628,7 @@ ALTER TABLE ONLY kost.invoices
 
 
 --
--- Name: invoices invoices_stay_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoices invoices_stay_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoices
@@ -2402,7 +2636,7 @@ ALTER TABLE ONLY kost.invoices
 
 
 --
--- Name: invoices invoices_updated_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: invoices invoices_updated_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.invoices
@@ -2410,7 +2644,7 @@ ALTER TABLE ONLY kost.invoices
 
 
 --
--- Name: meter_readings meter_readings_captured_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: meter_readings meter_readings_captured_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.meter_readings
@@ -2418,7 +2652,7 @@ ALTER TABLE ONLY kost.meter_readings
 
 
 --
--- Name: meter_readings meter_readings_room_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: meter_readings meter_readings_room_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.meter_readings
@@ -2426,7 +2660,7 @@ ALTER TABLE ONLY kost.meter_readings
 
 
 --
--- Name: payment_submission_files payment_submission_files_submission_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: payment_submission_files payment_submission_files_submission_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_submission_files
@@ -2434,7 +2668,7 @@ ALTER TABLE ONLY kost.payment_submission_files
 
 
 --
--- Name: payment_submissions payment_submissions_invoice_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: payment_submissions payment_submissions_invoice_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_submissions
@@ -2442,7 +2676,7 @@ ALTER TABLE ONLY kost.payment_submissions
 
 
 --
--- Name: payment_submissions payment_submissions_submitted_by_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: payment_submissions payment_submissions_submitted_by_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_submissions
@@ -2450,7 +2684,7 @@ ALTER TABLE ONLY kost.payment_submissions
 
 
 --
--- Name: payment_submissions payment_submissions_submitted_by_user_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: payment_submissions payment_submissions_submitted_by_user_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_submissions
@@ -2458,7 +2692,7 @@ ALTER TABLE ONLY kost.payment_submissions
 
 
 --
--- Name: payment_verifications payment_verifications_submission_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: payment_verifications payment_verifications_submission_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_verifications
@@ -2466,7 +2700,7 @@ ALTER TABLE ONLY kost.payment_verifications
 
 
 --
--- Name: payment_verifications payment_verifications_verified_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: payment_verifications payment_verifications_verified_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.payment_verifications
@@ -2474,7 +2708,7 @@ ALTER TABLE ONLY kost.payment_verifications
 
 
 --
--- Name: room_amenities room_amenities_amenity_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: room_amenities room_amenities_amenity_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.room_amenities
@@ -2482,7 +2716,7 @@ ALTER TABLE ONLY kost.room_amenities
 
 
 --
--- Name: room_amenities room_amenities_room_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: room_amenities room_amenities_room_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.room_amenities
@@ -2490,7 +2724,7 @@ ALTER TABLE ONLY kost.room_amenities
 
 
 --
--- Name: rooms rooms_room_type_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: rooms rooms_room_type_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.rooms
@@ -2498,7 +2732,7 @@ ALTER TABLE ONLY kost.rooms
 
 
 --
--- Name: stays stays_room_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: stays stays_room_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.stays
@@ -2506,7 +2740,7 @@ ALTER TABLE ONLY kost.stays
 
 
 --
--- Name: stays stays_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: stays stays_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.stays
@@ -2514,7 +2748,7 @@ ALTER TABLE ONLY kost.stays
 
 
 --
--- Name: tenant_credits tenant_credits_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: tenant_credits tenant_credits_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tenant_credits
@@ -2522,7 +2756,7 @@ ALTER TABLE ONLY kost.tenant_credits
 
 
 --
--- Name: tenant_deposits tenant_deposits_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: tenant_deposits tenant_deposits_created_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tenant_deposits
@@ -2530,7 +2764,7 @@ ALTER TABLE ONLY kost.tenant_deposits
 
 
 --
--- Name: tenant_deposits tenant_deposits_stay_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: tenant_deposits tenant_deposits_stay_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tenant_deposits
@@ -2538,7 +2772,7 @@ ALTER TABLE ONLY kost.tenant_deposits
 
 
 --
--- Name: tenant_deposits tenant_deposits_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: tenant_deposits tenant_deposits_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tenant_deposits
@@ -2546,7 +2780,7 @@ ALTER TABLE ONLY kost.tenant_deposits
 
 
 --
--- Name: ticket_attachments ticket_attachments_message_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: ticket_attachments ticket_attachments_message_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.ticket_attachments
@@ -2554,7 +2788,7 @@ ALTER TABLE ONLY kost.ticket_attachments
 
 
 --
--- Name: ticket_attachments ticket_attachments_ticket_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: ticket_attachments ticket_attachments_ticket_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.ticket_attachments
@@ -2562,7 +2796,7 @@ ALTER TABLE ONLY kost.ticket_attachments
 
 
 --
--- Name: ticket_messages ticket_messages_sender_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: ticket_messages ticket_messages_sender_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.ticket_messages
@@ -2570,7 +2804,7 @@ ALTER TABLE ONLY kost.ticket_messages
 
 
 --
--- Name: ticket_messages ticket_messages_sender_user_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: ticket_messages ticket_messages_sender_user_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.ticket_messages
@@ -2578,7 +2812,7 @@ ALTER TABLE ONLY kost.ticket_messages
 
 
 --
--- Name: ticket_messages ticket_messages_ticket_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: ticket_messages ticket_messages_ticket_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.ticket_messages
@@ -2586,7 +2820,7 @@ ALTER TABLE ONLY kost.ticket_messages
 
 
 --
--- Name: tickets tickets_assigned_to_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: tickets tickets_assigned_to_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tickets
@@ -2594,7 +2828,7 @@ ALTER TABLE ONLY kost.tickets
 
 
 --
--- Name: tickets tickets_closed_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: tickets tickets_closed_by_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tickets
@@ -2602,7 +2836,7 @@ ALTER TABLE ONLY kost.tickets
 
 
 --
--- Name: tickets tickets_stay_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: tickets tickets_stay_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tickets
@@ -2610,7 +2844,7 @@ ALTER TABLE ONLY kost.tickets
 
 
 --
--- Name: tickets tickets_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: -
+-- Name: tickets tickets_tenant_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
 ALTER TABLE ONLY kost.tickets
@@ -2621,5 +2855,5 @@ ALTER TABLE ONLY kost.tickets
 -- PostgreSQL database dump complete
 --
 
-\unrestrict jFyC6dakK3Kzocck686c4czJYdGPUf2XiuiVrjIwXB9zbPM1XfCgrcCUMqmbQkk
+\unrestrict ynSLom8BSfrD6tNP5Qqg1BIVwehMSDge3EVAtEdizbt7aIEdujfoehtiDMV5XEh
 

@@ -56,7 +56,7 @@
 
     var elOverrideWater = document.getElementById("override_water");
     var elWater = document.getElementById("water_fixed_amount");
-    
+
     // deposit fields + override
     var elDeposit = document.getElementById("deposit_amount");
     var elOverrideDeposit = document.getElementById("override_deposit");
@@ -69,7 +69,9 @@
     // variant radios
     function getVariant() {
       var checked = qs('input[name="room_variant"]:checked', form);
-      return checked && checked.value ? String(checked.value).toUpperCase() : "";
+      return checked && checked.value
+        ? String(checked.value).toUpperCase()
+        : "";
     }
 
     // pricing / totals sections
@@ -202,7 +204,8 @@
       } else {
         elTariff.readOnly = false;
         // kalau kosong, isi default biar gak “blank”
-        if (!isTruthyValue(elTariff.value)) elTariff.value = String(DEFAULT_TARIFF);
+        if (!isTruthyValue(elTariff.value))
+          elTariff.value = String(DEFAULT_TARIFF);
       }
     }
 
@@ -216,36 +219,40 @@
         elWater.readOnly = true;
       } else {
         elWater.readOnly = false;
-        if (!isTruthyValue(elWater.value)) elWater.value = String(DEFAULT_WATER);
+        if (!isTruthyValue(elWater.value))
+          elWater.value = String(DEFAULT_WATER);
       }
     }
 
     function applyDepositOverrideUI() {
-  if (!elDeposit) return;
+      if (!elDeposit) return;
 
-  var roomOpt =
-    elRoom && elRoom.options ? elRoom.options[elRoom.selectedIndex] : null;
+      var roomOpt =
+        elRoom && elRoom.options ? elRoom.options[elRoom.selectedIndex] : null;
 
-  var defaultDeposit = roomOpt && roomOpt.value ? num(roomOpt.dataset.deposit || 0) : 0;
+      var defaultDeposit =
+        roomOpt && roomOpt.value ? num(roomOpt.dataset.deposit || 0) : 0;
 
-  // tampilkan default text
-  if (elDepositDefaultText) {
-    elDepositDefaultText.textContent = defaultDeposit ? formatIDR(defaultDeposit) : "-";
-  }
+      // tampilkan default text
+      if (elDepositDefaultText) {
+        elDepositDefaultText.textContent = defaultDeposit
+          ? formatIDR(defaultDeposit)
+          : "-";
+      }
 
-  var overrideOn = !!(elOverrideDeposit && elOverrideDeposit.checked);
+      var overrideOn = !!(elOverrideDeposit && elOverrideDeposit.checked);
 
-  if (!overrideOn) {
-    // lock ke default
-    elDeposit.value = String(defaultDeposit || 0);
-    elDeposit.readOnly = true;
-  } else {
-    elDeposit.readOnly = false;
-    // kalau kosong, isi default biar gak blank
-    if (!String(elDeposit.value || "").trim()) elDeposit.value = String(defaultDeposit || 0);
-  }
-}
-
+      if (!overrideOn) {
+        // lock ke default
+        elDeposit.value = String(defaultDeposit || 0);
+        elDeposit.readOnly = true;
+      } else {
+        elDeposit.readOnly = false;
+        // kalau kosong, isi default biar gak blank
+        if (!String(elDeposit.value || "").trim())
+          elDeposit.value = String(defaultDeposit || 0);
+      }
+    }
 
     // -------------------------
     // DERIVED FIELDS
@@ -257,7 +264,7 @@
       // Final rule:
       // MONTHLY -> METERED
       // DAILY/WEEKLY/TWO_WEEKS -> INCLUDED
-      var mode = p === "MONTHLY" ? "METERED" : (p ? "INCLUDED" : "");
+      var mode = p === "MONTHLY" ? "METERED" : p ? "INCLUDED" : "";
 
       if (elElecModeHidden) elElecModeHidden.value = mode;
       if (elElecModeDisplay) elElecModeDisplay.value = mode;
@@ -342,10 +349,10 @@
           return (monthly / 30) * 4;
 
         case "WEEKLY":
-          return (monthly / 4) + tariff * (variant === "AC" ? 60 : 40);
+          return monthly / 4 + tariff * (variant === "AC" ? 60 : 40);
 
         case "TWO_WEEKS":
-          return (monthly / 2) + tariff * (variant === "AC" ? 100 : 60);
+          return monthly / 2 + tariff * (variant === "AC" ? 100 : 60);
 
         default:
           return 0;
@@ -379,7 +386,7 @@
       // apply UI + rules first
       applyTariffOverrideUI();
       applyWaterOverrideUI();
-        applyDepositOverrideUI();
+      applyDepositOverrideUI();
       syncElectricityMode();
       syncAdditionalUI();
       syncDiscountUI();
@@ -399,8 +406,10 @@
 
       if (elBasePrev) elBasePrev.value = formatIDR(base);
 
-      var additional = elAdditional && !elAdditional.disabled ? num(elAdditional.value) : 0;
-      var discount = elDiscount && !elDiscount.disabled ? num(elDiscount.value) : 0;
+      var additional =
+        elAdditional && !elAdditional.disabled ? num(elAdditional.value) : 0;
+      var discount =
+        elDiscount && !elDiscount.disabled ? num(elDiscount.value) : 0;
 
       var total = base + additional - discount;
       if (total < 0) total = 0;
@@ -417,17 +426,21 @@
       var base = ctx.base;
 
       var tenantOpt =
-        elTenant && elTenant.options ? elTenant.options[elTenant.selectedIndex] : null;
+        elTenant && elTenant.options
+          ? elTenant.options[elTenant.selectedIndex]
+          : null;
       var tenantName = tenantOpt && tenantOpt.value ? tenantOpt.text : "-";
 
-      var additional = elAdditional && !elAdditional.disabled ? num(elAdditional.value) : 0;
-      var discount = elDiscount && !elDiscount.disabled ? num(elDiscount.value) : 0;
+      var additional =
+        elAdditional && !elAdditional.disabled ? num(elAdditional.value) : 0;
+      var discount =
+        elDiscount && !elDiscount.disabled ? num(elDiscount.value) : 0;
 
       var total = base + additional - discount;
       if (total < 0) total = 0;
 
       var water = elWater ? num(elWater.value) : DEFAULT_WATER;
-      var mode = elElecModeHidden ? (elElecModeHidden.value || "-") : "-";
+      var mode = elElecModeHidden ? elElecModeHidden.value || "-" : "-";
 
       function set(id, text) {
         var el = document.getElementById(id);
@@ -451,15 +464,17 @@
 
       set(
         "sum_additional_reason",
-        elAdditionalReason && !elAdditionalReason.disabled && elAdditionalReason.value
+        elAdditionalReason &&
+          !elAdditionalReason.disabled &&
+          elAdditionalReason.value
           ? elAdditionalReason.value
-          : "-"
+          : "-",
       );
       set(
         "sum_discount_reason",
         elDiscountReason && !elDiscountReason.disabled && elDiscountReason.value
           ? elDiscountReason.value
-          : "-"
+          : "-",
       );
     }
 
@@ -551,9 +566,9 @@
     }
     // E. Override deposit
     if (elOverrideDeposit) {
-    elOverrideDeposit.addEventListener("change", function () {
+      elOverrideDeposit.addEventListener("change", function () {
         applyDepositOverrideUI();
-    });
+      });
     }
 
     // E. Override water
@@ -660,10 +675,12 @@
     // Make sure defaults are applied even on first load
     if (elOverrideTariff && !elOverrideTariff.checked) {
       // default path
-      if (elTariff && !isTruthyValue(elTariff.value)) elTariff.value = String(DEFAULT_TARIFF);
+      if (elTariff && !isTruthyValue(elTariff.value))
+        elTariff.value = String(DEFAULT_TARIFF);
     }
     if (elOverrideWater && !elOverrideWater.checked) {
-      if (elWater && !isTruthyValue(elWater.value)) elWater.value = String(DEFAULT_WATER);
+      if (elWater && !isTruthyValue(elWater.value))
+        elWater.value = String(DEFAULT_WATER);
     }
 
     applyTariffOverrideUI();

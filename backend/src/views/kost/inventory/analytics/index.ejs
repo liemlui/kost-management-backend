@@ -1,0 +1,120 @@
+<% const title = "Inventory Analytics"; %>
+<%- include('../../partials/header', { title }) %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Inventory Analytics</h1>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="/admin/kost/inventory/items">Items</a>
+    <a class="btn btn-outline-secondary" href="/admin/kost/inventory/movements">Movements</a>
+  </div>
+</div>
+
+<!-- Top Used -->
+<div class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Top Used Items (Last 30 Days)</h2>
+    <div class="table-responsive">
+      <table class="table table-sm table-striped mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Item</th>
+            <th class="text-end" style="width:180px;">Total Use (30d)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!topUsed || topUsed.length === 0) { %>
+            <tr><td colspan="2" class="text-muted">No USE movements in last 30 days.</td></tr>
+          <% } %>
+          <% (topUsed || []).forEach(r => { %>
+            <tr>
+              <td class="fw-semibold"><%= r.name %> <span class="text-muted">(<%= r.uom || 'PCS' %>)</span></td>
+              <td class="text-end"><%= Number(r.total_use_30d || 0).toLocaleString("id-ID") %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Reorder Suggestions -->
+<div class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Reorder Suggestions</h2>
+    <div class="alert alert-info mb-3">
+      Rule v1: LOW STOCK jika <code>stock ≤ reorder_point</code>. Suggested qty = max(<code>reorder_qty</code>, kebutuhan 14 hari).
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-striped mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Item</th>
+            <th class="text-end" style="width:140px;">Stock</th>
+            <th class="text-end" style="width:140px;">Use (30d)</th>
+            <th class="text-end" style="width:160px;">Avg Daily Use</th>
+            <th class="text-end" style="width:140px;">Days of Stock</th>
+            <th class="text-end" style="width:180px;">Suggested Reorder Qty</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!reorderSuggestions || reorderSuggestions.length === 0) { %>
+            <tr><td colspan="6" class="text-muted p-2">No low stock items detected.</td></tr>
+          <% } %>
+
+          <% (reorderSuggestions || []).forEach(r => { %>
+            <tr class="table-danger">
+              <td class="fw-semibold"><%= r.name %> <span class="text-muted">(<%= r.uom || 'PCS' %>)</span></td>
+              <td class="text-end"><%= Number(r.totalStock || 0).toLocaleString("id-ID") %></td>
+              <td class="text-end"><%= Number(r.totalUse30d || 0).toLocaleString("id-ID") %></td>
+              <td class="text-end"><%= (r.avgDailyUse || 0).toFixed(2) %></td>
+              <td class="text-end"><%= r.daysOfStock == null ? "-" : r.daysOfStock %></td>
+              <td class="text-end">
+                <%= r.suggestedReorderQty == null ? "-" : Number(r.suggestedReorderQty).toLocaleString("id-ID") %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Optional: All Items Summary -->
+<div class="card">
+  <div class="card-body">
+    <h2 class="h5 mb-3">All Items Summary</h2>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Item</th>
+            <th class="text-end" style="width:140px;">Stock</th>
+            <th class="text-end" style="width:140px;">Use (30d)</th>
+            <th class="text-end" style="width:160px;">Avg Daily Use</th>
+            <th style="width:120px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% (analytics || []).forEach(r => { %>
+            <tr>
+              <td><%= r.name %> <span class="text-muted">(<%= r.uom || 'PCS' %>)</span></td>
+              <td class="text-end"><%= Number(r.totalStock || 0).toLocaleString("id-ID") %></td>
+              <td class="text-end"><%= Number(r.totalUse30d || 0).toLocaleString("id-ID") %></td>
+              <td class="text-end"><%= (r.avgDailyUse || 0).toFixed(2) %></td>
+              <td>
+                <% if (r.isLowStock) { %>
+                  <span class="badge text-bg-danger">LOW</span>
+                <% } else { %>
+                  <span class="badge text-bg-success">OK</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('../../partials/footer') %>

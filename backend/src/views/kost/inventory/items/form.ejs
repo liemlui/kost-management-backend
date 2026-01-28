@@ -1,0 +1,81 @@
+<% const isEdit = !!form?.id; %>
+<% const title = isEdit ? "Edit Inventory Item" : "New Inventory Item"; %>
+<%- include('../../partials/header', { title }) %>
+
+<h1 class="h3 mb-3"><%= title %></h1>
+
+<% if (errors && errors.length) { %>
+  <div class="alert alert-danger">
+    <ul class="mb-0">
+      <% errors.forEach(e => { %><li><%= e %></li><% }) %>
+    </ul>
+  </div>
+<% } %>
+
+<div class="card">
+  <div class="card-body">
+    <form method="POST" action="<%= isEdit ? ('/admin/kost/inventory/items/' + form.id) : '/admin/kost/inventory/items' %>">
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">SKU (optional)</label>
+          <input class="form-control" name="sku" value="<%= form.sku || '' %>">
+        </div>
+
+        <div class="col-md-8">
+          <label class="form-label">Name *</label>
+          <input class="form-control" name="name" required value="<%= form.name || '' %>">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Item Type *</label>
+          <select class="form-select" name="item_type" required>
+            <option value="">-- select --</option>
+            <% (itemTypes || []).forEach(t => { %>
+              <option value="<%= t %>" <%= String(form.item_type) === String(t) ? 'selected' : '' %>><%= t %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Category</label>
+          <input class="form-control" name="category" value="<%= form.category || '' %>">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">UOM *</label>
+          <input class="form-control" name="uom" required value="<%= form.uom || 'PCS' %>">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Reorder Point</label>
+          <input class="form-control" name="reorder_point" inputmode="decimal"
+                 value="<%= form.reorder_point ?? '' %>">
+          <div class="form-text">Jika stock ≤ reorder point → LOW STOCK.</div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Reorder Qty</label>
+          <input class="form-control" name="reorder_qty" inputmode="decimal"
+                 value="<%= form.reorder_qty ?? '' %>">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Status</label>
+          <select class="form-select" name="is_active">
+            <option value="true" <%= (form.is_active === true || form.is_active === 'true' || form.is_active == null) ? 'selected' : '' %>>ACTIVE</option>
+            <option value="false" <%= (form.is_active === false || form.is_active === 'false') ? 'selected' : '' %>>INACTIVE</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Save</button>
+        <a class="btn btn-outline-secondary" href="/admin/kost/inventory/items">Cancel</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<%- include('../../partials/footer') %>

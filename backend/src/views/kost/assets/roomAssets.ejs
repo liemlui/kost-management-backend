@@ -1,0 +1,104 @@
+<%- include("../partials/header", { title }) %>
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="h3 mb-0">Room Assets</h1>
+    <div class="text-muted">Room ID: <%= roomId %></div>
+  </div>
+  <a class="btn btn-outline-secondary" href="/admin/kost/rooms/<%= roomId %>">Back to Room</a>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">Assign Asset to Room</div>
+  <div class="card-body">
+    <form method="POST" action="/admin/kost/rooms/<%= roomId %>/assets" class="row g-2">
+      <div class="col-md-6">
+        <label class="form-label">Item</label>
+        <select class="form-select" name="inventory_item_id" required>
+          <option value="">-- pilih item --</option>
+          <% (items || []).forEach(it => { %>
+            <option value="<%= it.id %>"><%= it.name %> (<%= it.sku %>) - <%= it.uom %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">Qty</label>
+        <input class="form-control" name="qty" type="number" step="0.01" min="0.01" value="1" required />
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Note (optional)</label>
+        <input class="form-control" name="note" />
+      </div>
+
+      <div class="col-12">
+        <button class="btn btn-primary" type="submit">Assign</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Assets in Room</div>
+  <div class="card-body p-0">
+    <table class="table table-striped table-hover mb-0">
+      <thead>
+        <tr>
+          <th style="width:70px;">ID</th>
+          <th>Item</th>
+          <th style="width:90px;">Qty</th>
+          <th style="width:120px;">Status</th>
+          <th>Note</th>
+          <th style="width:340px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!assets || assets.length === 0) { %>
+          <tr><td colspan="6" class="text-center p-3 text-muted">No assets assigned.</td></tr>
+        <% } %>
+
+        <% (assets || []).forEach(a => { %>
+          <tr>
+            <td><%= a.id %></td>
+            <td>
+              <div class="fw-semibold"><%= a.item_name %></div>
+              <div class="text-muted small"><%= a.sku %> • <%= a.uom %></div>
+            </td>
+            <td><%= Number(a.qty) %></td>
+            <td>
+              <% if (a.status === 'IN_ROOM') { %>
+                <span class="badge bg-success">IN_ROOM</span>
+              <% } else if (a.status === 'IN_REPAIR') { %>
+                <span class="badge bg-warning text-dark">IN_REPAIR</span>
+              <% } else { %>
+                <span class="badge bg-secondary"><%= a.status %></span>
+              <% } %>
+            </td>
+            <td class="text-muted"><%= a.note || '-' %></td>
+            <td class="d-flex gap-2 flex-wrap">
+              <% if (a.status === 'IN_ROOM') { %>
+                <form method="POST" action="/admin/kost/rooms/<%= roomId %>/assets/<%= a.id %>/repair">
+                  <button class="btn btn-sm btn-outline-warning" type="submit">Mark Repair</button>
+                </form>
+              <% } %>
+
+              <% if (a.status === 'IN_REPAIR') { %>
+                <form method="POST" action="/admin/kost/rooms/<%= roomId %>/assets/<%= a.id %>/back">
+                  <button class="btn btn-sm btn-outline-success" type="submit">Back to Room</button>
+                </form>
+              <% } %>
+
+              <form method="POST" action="/admin/kost/rooms/<%= roomId %>/assets/<%= a.id %>/remove">
+                <input type="hidden" name="remove_reason" value="removed by admin" />
+                <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include("../partials/footer") %>

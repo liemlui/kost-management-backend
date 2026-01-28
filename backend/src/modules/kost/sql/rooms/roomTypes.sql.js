@@ -11,7 +11,8 @@ module.exports = {
       bed_type, bed_size_cm,
       is_active,
       notes,
-      created_at
+      created_at,
+      updated_at
     FROM kost.room_types
     ORDER BY code ASC;
   `,
@@ -27,7 +28,8 @@ module.exports = {
       bed_type, bed_size_cm,
       is_active,
       notes,
-      created_at
+      created_at,
+      updated_at
     FROM kost.room_types
     WHERE id = $1;
   `,

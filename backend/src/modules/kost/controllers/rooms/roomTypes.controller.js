@@ -2,13 +2,23 @@
 const repo = require("../../repos/rooms/roomTypes.repo");
 
 function parseNum(v) {
-  if (v === "" || v == null) return null;
-  const n = Number(v);
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (s === "" || s.toLowerCase() === "false") return null;  // <- penting
+  const n = Number(s);
   return Number.isFinite(n) ? n : null;
 }
+
 function toBool(v) {
-  return v === "on" || v === "true" || v === true;
+  // checkbox HTML biasanya: undefined (unchecked) / "1" / "on" / "true" (checked)
+  if (v === true) return true;
+  if (v === false) return false;
+  if (v === null || v === undefined) return false;
+
+  const s = String(v).trim().toLowerCase();
+  return s === "1" || s === "true" || s === "on" || s === "yes";
 }
+
 
 async function list(req, res) {
   const roomTypes = await repo.listRoomTypes();
@@ -48,7 +58,7 @@ async function create(req, res) {
     code: (req.body.code || "").trim(),
     name: (req.body.name || "").trim(),
     base_monthly_price: req.body.base_monthly_price,
-    deposit_amount: req.body.deposit_amount,
+    deposit_amount: req.body.deposit_amount ?? "",
     is_capsule: toBool(req.body.is_capsule),
     room_width_m: req.body.room_width_m,
     room_length_m: req.body.room_length_m,
@@ -76,22 +86,31 @@ async function create(req, res) {
     });
   }
 
+const allowedBedTypes = new Set(["FOAM", "SPRINGBED"]);
+let bed_type = (form.bed_type || "").trim().toUpperCase();
+if (!bed_type) bed_type = null;
+
+if (bed_type && !allowedBedTypes.has(bed_type)) {
+  errors.push("Bed type must be FOAM or SPRINGBED.");
+}
+
+
   const payload = {
     code: form.code,
     name: form.name,
-    base_monthly_price: parseNum(form.base_monthly_price) || 0,
-    deposit_amount: parseNum(form.deposit_amount) || 0,
-    is_capsule: form.is_capsule,
-    room_width_m: parseNum(form.room_width_m),
-    room_length_m: parseNum(form.room_length_m),
-    bathroom_location: form.bathroom_location || null,
-    bathroom_width_m: parseNum(form.bathroom_width_m),
-    bathroom_length_m: parseNum(form.bathroom_length_m),
-    has_ac: form.has_ac,
-    has_fan: form.has_fan,
-    bed_type: form.bed_type || null,
-    bed_size_cm: parseNum(form.bed_size_cm),
-    is_active: form.is_active,
+    base_monthly_price: parseNum(form.base_monthly_price) ?? 0,
+    deposit_amount: parseNum(form.deposit_amount) ?? 0,
+    is_capsule: toBool(form.is_capsule),
+    room_width_m: parseNum(form.room_width_m) ?? null,
+    room_length_m: parseNum(form.room_length_m) ?? null,
+    bathroom_location: form.bathroom_location ?? null,
+    bathroom_width_m: parseNum(form.bathroom_width_m) ?? null,
+    bathroom_length_m: parseNum(form.bathroom_length_m)  ?? null,
+    has_ac: toBool(form.has_ac),
+    has_fan: toBool(form.has_fan),
+    bed_type: bed_type,
+    bed_size_cm: parseNum(form.bed_size_cm) ?? null,
+    is_active: toBool(form.is_active),
     notes: form.notes || null,
   };
 
@@ -109,17 +128,17 @@ async function showEdit(req, res) {
     name: rt.name || "",
     base_monthly_price: rt.base_monthly_price ?? "",
     deposit_amount: rt.deposit_amount ?? "",
-    is_capsule: !!rt.is_capsule,
+    is_capsule: toBool(rt.is_capsule),
     room_width_m: rt.room_width_m ?? "",
     room_length_m: rt.room_length_m ?? "",
     bathroom_location: rt.bathroom_location || "",
     bathroom_width_m: rt.bathroom_width_m ?? "",
     bathroom_length_m: rt.bathroom_length_m ?? "",
-    has_ac: !!rt.has_ac,
-    has_fan: !!rt.has_fan,
+    has_ac: toBool(rt.has_ac),
+    has_fan: toBool(rt.has_fan),
     bed_type: rt.bed_type || "",
     bed_size_cm: rt.bed_size_cm ?? "",
-    is_active: !!rt.is_active,
+    is_active: toBool(rt.is_active),
     notes: rt.notes || "",
   };
 
@@ -140,7 +159,7 @@ async function update(req, res) {
     code: (req.body.code || "").trim(),
     name: (req.body.name || "").trim(),
     base_monthly_price: req.body.base_monthly_price,
-    deposit_amount: req.body.deposit_amount,
+    deposit_amount: req.body.deposit_amount ?? "",
     is_capsule: toBool(req.body.is_capsule),
     room_width_m: req.body.room_width_m,
     room_length_m: req.body.room_length_m,
@@ -167,28 +186,37 @@ async function update(req, res) {
       form,
     });
   }
+const allowedBedTypes = new Set(["FOAM", "SPRINGBED"]);
+let bed_type = (form.bed_type || "").trim().toUpperCase();
+if (!bed_type) bed_type = null;
+
+if (bed_type && !allowedBedTypes.has(bed_type)) {
+  errors.push("Bed type must be FOAM or SPRINGBED.");
+}
+
 
   const payload = {
     code: form.code,
     name: form.name,
-    base_monthly_price: parseNum(form.base_monthly_price) || 0,
-    is_capsule: form.is_capsule,
-    room_width_m: parseNum(form.room_width_m),
-    room_length_m: parseNum(form.room_length_m),
+    base_monthly_price: parseNum(form.base_monthly_price) ?? 0,
+    deposit_amount: parseNum(form.deposit_amount) ?? 0,
+    is_capsule: toBool(form.is_capsule),
+    room_width_m: parseNum(form.room_width_m) ?? null,
+    room_length_m: parseNum(form.room_length_m) ?? null,
     bathroom_location: form.bathroom_location || null,
-    bathroom_width_m: parseNum(form.bathroom_width_m),
-    bathroom_length_m: parseNum(form.bathroom_length_m),
-    has_ac: form.has_ac,
-    has_fan: form.has_fan,
-    bed_type: form.bed_type || null,
-    bed_size_cm: parseNum(form.bed_size_cm),
-    is_active: form.is_active,
+    bathroom_width_m: parseNum(form.bathroom_width_m) ?? null,
+    bathroom_length_m: parseNum(form.bathroom_length_m) ?? null,
+    has_ac: toBool(form.has_ac),
+    has_fan: toBool(form.has_fan),
+    bed_type: bed_type,
+    bed_size_cm: parseNum(form.bed_size_cm) ?? null,
+    is_active: toBool(form.is_active),
     notes: form.notes || null,
   };
 
   const result = await repo.updateRoomType(id, payload);
   if (!result) return res.status(404).send("Room type not found");
-  return res.redirect(`/admin/kost/room-types/${id}/edit`);
+  return res.redirect(`/admin/kost/room-types`);
 }
 
 module.exports = { list, showNew, create, showEdit, update };

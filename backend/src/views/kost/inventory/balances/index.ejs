@@ -1,0 +1,131 @@
+<%- include("../../partials/header", { title }) %>
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 mb-0">Inventory Balances</h1>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="/admin/kost/inventory/items">Items</a>
+    <a class="btn btn-outline-secondary" href="/admin/kost/inventory/locations">Locations</a>
+    <a class="btn btn-outline-secondary" href="/admin/kost/inventory/movements">Movements</a>
+    <a class="btn btn-outline-secondary" href="/admin/kost/inventory/analytics">Analytics</a>
+  </div>
+</div>
+
+<form method="GET" class="card p-3 mb-3">
+  <div class="row g-2">
+    <div class="col-md-4">
+      <label class="form-label">Item</label>
+      <select name="item_id" class="form-select">
+        <option value="">All items</option>
+        <% items.forEach(i => { %>
+          <option value="<%= i.id %>" <%= String(filters.item_id||"") === String(i.id) ? "selected" : "" %>>
+            <%= i.name %><% if (i.sku) { %> — <%= i.sku %><% } %>
+          </option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Location</label>
+      <select name="location_id" class="form-select">
+        <option value="">All locations</option>
+        <% locations.forEach(l => { %>
+          <option value="<%= l.id %>" <%= String(filters.location_id||"") === String(l.id) ? "selected" : "" %>>
+            <%= l.name %> (<%= l.location_type %>)
+          </option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="col-md-4 d-flex align-items-end gap-3">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="only_low" name="only_low"
+          <%= (String(filters.only_low||"").toLowerCase()==="true" || String(filters.only_low||"").toLowerCase()==="on" || String(filters.only_low||"")==="1") ? "checked" : "" %>>
+        <label class="form-check-label" for="only_low">Only low stock</label>
+      </div>
+
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="only_zero" name="only_zero"
+          <%= (String(filters.only_zero||"").toLowerCase()==="true" || String(filters.only_zero||"").toLowerCase()==="on" || String(filters.only_zero||"")==="1") ? "checked" : "" %>>
+        <label class="form-check-label" for="only_zero">Only zero stock</label>
+      </div>
+
+      <div class="ms-auto d-flex gap-2">
+        <a class="btn btn-light" href="/admin/kost/inventory/balances">Reset</a>
+        <button class="btn btn-primary" type="submit">Filter</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<%
+  const fmtRp = (n) => (n === null || n === undefined) ? "-" : ("Rp " + new Intl.NumberFormat("id-ID").format(Number(n)));
+  const fmtDateTime = (d) => d ? new Date(d).toLocaleString("id-ID") : "-";
+%>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-striped align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Location</th>
+          <th class="text-end">Qty</th>
+          <th class="text-end">Avg Unit Cost</th>
+          <th>Status</th>
+          <th>Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!balances || balances.length === 0) { %>
+          <tr>
+            <td colspan="6" class="text-muted">No balances found.</td>
+          </tr>
+        <% } else { %>
+          <% balances.forEach(b => { 
+            const qty = Number(b.qty_on_hand || 0);
+            const rp = (b.reorder_point === null || b.reorder_point === undefined) ? null : Number(b.reorder_point);
+            const isZero = qty === 0;
+            const isLow = (rp !== null) ? (qty <= rp) : false;
+          %>
+            <tr>
+              <td>
+                <div class="fw-semibold"><%= b.item_name %></div>
+                <div class="text-muted small">
+                  <% if (b.sku) { %><span>SKU: <%= b.sku %></span> · <% } %>
+                  <span>UoM: <%= b.uom || "-" %></span>
+                  <% if (b.reorder_point !== null && b.reorder_point !== undefined) { %>
+                    · <span>Reorder ≤ <%= b.reorder_point %></span>
+                  <% } %>
+                </div>
+              </td>
+
+              <td>
+                <div class="fw-semibold"><%= b.location_name %></div>
+                <div class="text-muted small">
+                  <%= b.location_type %><% if (b.room_id) { %> · Room <%= b.room_id %><% } %>
+                </div>
+              </td>
+
+              <td class="text-end"><%= qty %></td>
+              <td class="text-end"><%= fmtRp(b.avg_unit_cost) %></td>
+
+              <td>
+                <% if (isZero) { %>
+                  <span class="badge bg-danger">Empty</span>
+                <% } else if (isLow) { %>
+                  <span class="badge bg-warning text-dark">Low</span>
+                <% } else { %>
+                  <span class="badge bg-success">OK</span>
+                <% } %>
+              </td>
+
+              <td class="text-muted"><%= fmtDateTime(b.updated_at) %></td>
+            </tr>
+          <% }) %>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include("../../partials/footer") %>

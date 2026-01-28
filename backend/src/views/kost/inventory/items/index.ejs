@@ -1,0 +1,81 @@
+<% const title = "Inventory Items"; %>
+<%- include('../../partials/header', { title }) %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Inventory Items</h1>
+  <a class="btn btn-primary" href="/admin/kost/inventory/items/new">+ New Item</a>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-striped table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width:70px;">ID</th>
+          <th style="width:140px;">SKU</th>
+          <th>Name</th>
+          <th style="width:160px;">Type</th>
+          <th style="width:160px;">Category</th>
+          <th style="width:90px;">UOM</th>
+
+          <th class="text-end" style="width:140px;">Reorder Pt</th>
+          <th class="text-end" style="width:140px;">Reorder Qty</th>
+
+          <th class="text-end" style="width:160px;">Stock</th>
+          <th style="width:120px;">Alert</th>
+
+          <th style="width:170px;">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <% if (!items || items.length === 0) { %>
+          <tr><td colspan="11" class="text-muted p-3">No inventory items yet.</td></tr>
+        <% } %>
+
+        <% (items || []).forEach(r => { %>
+          <tr class="<%= r.is_low_stock ? 'table-danger' : '' %>">
+            <td><%= r.id %></td>
+            <td class="mono"><%= r.sku || "-" %></td>
+            <td class="fw-semibold"><%= r.name %></td>
+
+            <td>
+              <span class="badge text-bg-secondary"><%= r.item_type %></span>
+            </td>
+
+            <td><%= r.category || "-" %></td>
+            <td><%= r.uom || "PCS" %></td>
+
+            <td class="text-end"><%= r.reorder_point == null ? "-" : Number(r.reorder_point).toLocaleString("id-ID") %></td>
+            <td class="text-end"><%= r.reorder_qty == null ? "-" : Number(r.reorder_qty).toLocaleString("id-ID") %></td>
+
+            <td class="text-end">
+              <%= Number(r.total_qty_on_hand || 0).toLocaleString("id-ID") %> <%= r.uom || "PCS" %>
+            </td>
+
+            <td>
+              <% if (!r.is_active) { %>
+                <span class="badge text-bg-secondary">INACTIVE</span>
+              <% } else if (r.is_low_stock) { %>
+                <span class="badge text-bg-danger">LOW STOCK</span>
+              <% } else { %>
+                <span class="badge text-bg-success">OK</span>
+              <% } %>
+            </td>
+
+            <td>
+              <a class="btn btn-sm btn-outline-secondary" href="/admin/kost/inventory/items/<%= r.id %>/edit">Edit</a>
+
+              <form method="POST" action="/admin/kost/inventory/items/<%= r.id %>/delete" class="d-inline"
+                    onsubmit="return confirm('Disable item ini? (is_active=false)')">
+                <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../../partials/footer') %>

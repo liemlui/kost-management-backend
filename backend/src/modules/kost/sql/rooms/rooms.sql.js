@@ -10,12 +10,21 @@ module.exports = {
       r.notes,
       r.created_at,
       r.updated_at,
+
       rt.id AS room_type_id,
       rt.code AS room_type_code,
       rt.name AS room_type_name,
-      rt.base_monthly_price
+      rt.base_monthly_price,
+
+      (s.id IS NOT NULL) AS is_occupied,
+      s.tenant_id AS active_tenant_id,
+      s.check_in_at AS active_check_in_at
+
     FROM kost.rooms r
     JOIN kost.room_types rt ON rt.id = r.room_type_id
+      LEFT JOIN kost.stays s
+      ON s.room_id = r.id
+    AND s.status = 'ACTIVE'
     ORDER BY r.floor, r.code;
   `,
 
@@ -85,18 +94,20 @@ module.exports = {
     WHERE id = $1
     RETURNING id;
   `,
-  updateRoomTypeForRoom : `
+  updateRoomType : `
   UPDATE kost.rooms
-  SET room_type_id = $2,
-      updated_at = now()
+  SET room_type_id = $2
   WHERE id = $1
-  RETURNING id, room_type_id
+  RETURNING id, room_type_id;
 `,
 
-  deleteRoom: `
-    DELETE FROM kost.rooms
-    WHERE id = $1;
-  `,
+deleteRoom: `
+  UPDATE kost.rooms
+  SET status = 'INACTIVE'
+  WHERE id = $1
+  RETURNING id;
+`,
+
 
   blockRoom: `
     UPDATE kost.rooms

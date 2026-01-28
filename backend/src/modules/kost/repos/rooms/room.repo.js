@@ -79,9 +79,11 @@ async function unblockRoom(id) {
 }
 
 function updateRoomType(roomId, roomTypeId) {
+  const rid = assertNumberId(roomId, "kost.rooms.updateRoomType.roomId");
+  const rtid = assertNumberId(roomTypeId, "kost.rooms.updateRoomType.roomTypeId");
   return query(
     sql.rooms.updateRoomTypeForRoom,
-    [roomId, roomTypeId],
+    [rid, rtid],
     { label: "kost.rooms.updateRoomType" }
   ).then((r) => r.rows[0] || null);
 }

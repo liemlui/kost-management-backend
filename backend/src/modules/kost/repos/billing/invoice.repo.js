@@ -3,25 +3,34 @@ const { query } = require("../../../../db/pool");
 const sql = require("../../sql/billing");
 
 function listInvoices(status = null) {
-  return query(sql.invoices.listInvoices, [status], "kost.billing.listInvoices");
+  return query(sql.listInvoices, [status], "kost.billing.listInvoices");
 }
 
 function getInvoice(invoiceId) {
-  return query(sql.invoices.getInvoice, [invoiceId], "kost.billing.getInvoice");
+  return query(sql.getInvoice, [invoiceId], "kost.billing.getInvoice");
 }
 
 function listInvoiceItems(invoiceId) {
-  return query(sql.invoices.listInvoiceItems, [invoiceId], "kost.billing.listInvoiceItems");
+  return query(sql.listInvoiceItems, [invoiceId], "kost.billing.listInvoiceItems");
 }
 
 function getInvoiceElectricity(invoiceId) {
-  return query(sql.invoices.getInvoiceElectricity, [invoiceId], "kost.billing.getInvoiceElectricity");
+  return query(sql.getInvoiceElectricity, [invoiceId], "kost.billing.getInvoiceElectricity");
 }
-async function issueInvoice(invoiceId) {
+
+// ✅ ADD: DRAFT → ISSUED (by invoice id)
+function issueInvoice(invoiceId) {
   return query(
-    sql.invoices.issueInvoice,
+    sql.issueInvoice,              // 🔥 ini harus ada di invoices.sql.js (flat)
     [invoiceId],
     "kost.billing.issueInvoice"
   );
 }
-module.exports = { listInvoices, getInvoice, listInvoiceItems, getInvoiceElectricity, issueInvoice };
+
+module.exports = {
+  listInvoices,
+  getInvoice,
+  listInvoiceItems,
+  getInvoiceElectricity,
+  issueInvoice, // ✅ export
+};

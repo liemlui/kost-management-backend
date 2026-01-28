@@ -13,7 +13,7 @@
 <form method="POST" action="<%= action %>" class="card p-3">
   <div class="row g-3">
     <div class="col-md-3">
-      <label class="form-label">Code</label>
+<label class="form-label">Code</label>
       <input class="form-control" name="code" value="<%= form.code %>" required />
     </div>
 
@@ -21,7 +21,7 @@
       <label class="form-label">Name</label>
       <input class="form-control" name="name" value="<%= form.name %>" required />
     </div>
-
+ 
     <div class="col-md-4">
       <label class="form-label">Base Price</label>
       <input class="form-control" name="base_monthly_price" value="<%= form.base_monthly_price %>" />
@@ -31,9 +31,9 @@
         <label class="form-label">Deposit</label>
         <input class="form-control" name="deposit_amount" value="<%= form.deposit_amount %>" />
     </div>
-
+  
     <hr class="my-3">
-<h6 class="text-muted">Room Dimensions & Facilities</h6>
+ <h6 class="text-muted">Room Dimensions & Facilities</h6>
 
 
     <div class="col-md-2">
@@ -86,21 +86,27 @@
 
     <div class="col-md-2">
       <label class="form-label">Bath Width (m)</label>
-      <input class="form-control" name="bathroom_width_m" value="<%= form.bathroom_width_m %>" />
+      <input class="form-control" name="bathroom_width_m" value="<%= form.bathroom_width_m ?? '' %>" />
     </div>
 
     <div class="col-md-2">
       <label class="form-label">Bath Length (m)</label>
-      <input class="form-control" name="bathroom_length_m" value="<%= form.bathroom_length_m %>" />
+      <input class="form-control" name="bathroom_length_m" value="<%= form.bathroom_length_m ?? ''%>" />
     </div>
     <hr class="my-3">
 <h6 class="text-muted">Bed & Misc</h6>
 
 
-    <div class="col-md-3">
-      <label class="form-label">Bed Type</label>
-      <input class="form-control" name="bed_type" value="<%= form.bed_type %>" />
-    </div>
+<div class="col-md-3">
+  <label class="form-label">Bed Type</label>
+  <select name="bed_type" class="form-select">
+    <option value="" <%= !form.bed_type ? "selected" : "" %>>-</option>
+    <option value="FOAM" <%= form.bed_type === "FOAM" ? "selected" : "" %>>FOAM</option>
+    <option value="SPRINGBED" <%= form.bed_type === "SPRINGBED" ? "selected" : "" %>>SPRINGBED</option>
+  </select>
+</div>
+
+
 
     <div class="col-md-2">
       <label class="form-label">Bed Size (cm)</label>
