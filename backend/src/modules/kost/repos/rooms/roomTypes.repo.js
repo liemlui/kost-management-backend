@@ -7,11 +7,9 @@ const sql = require("../../sql");
  * Returns rows[].
  */
 async function listRoomTypes() {
-  const result = await query(
-    sql.rooms.listRoomTypes,
-    [],
-    { label: "kost.roomTypes.listRoomTypes" }
-  );
+  const result = await query(sql.rooms.listRoomTypes, [], {
+    label: "kost.roomTypes.listRoomTypes",
+  });
   return result.rows;
 }
 
@@ -20,11 +18,9 @@ async function listRoomTypes() {
  * Returns row object or null.
  */
 async function getRoomTypeById(id) {
-  const result = await query(
-    sql.rooms.getRoomTypeById,
-    [id],
-    { label: "kost.roomTypes.getRoomTypeById" }
-  );
+  const result = await query(sql.rooms.getRoomTypeById, [id], {
+    label: "kost.roomTypes.getRoomTypeById",
+  });
   return result.rows[0] || null;
 }
 
@@ -35,14 +31,22 @@ async function getRoomTypeById(id) {
  */
 async function insertRoomType(payload) {
   const {
-    code, name,
-    base_monthly_price, deposit_amount,
+    code,
+    name,
+    base_monthly_price,
+    deposit_amount,
     is_capsule,
-    room_width_m, room_length_m,
-    bathroom_location, bathroom_width_m, bathroom_length_m,
-    has_ac, has_fan,
-    bed_type, bed_size_cm,
-    is_active, notes,
+    room_width_m,
+    room_length_m,
+    bathroom_location,
+    bathroom_width_m,
+    bathroom_length_m,
+    has_ac,
+    has_fan,
+    bed_type,
+    bed_size_cm,
+    is_active,
+    notes,
   } = payload;
 
   const result = await query(
@@ -53,19 +57,19 @@ async function insertRoomType(payload) {
       base_monthly_price ?? 0,
       deposit_amount ?? 0,
       !!is_capsule,
-      room_width_m || null,
-      room_length_m || null,
-      bathroom_location || null,
-      bathroom_width_m || null,
-      bathroom_length_m || null,
+      room_width_m ?? null,
+      room_length_m ?? null,
+      bathroom_location,
+      bathroom_width_m ?? null,
+      bathroom_length_m ?? null,
       !!has_ac,
       !!has_fan,
-      bed_type || null,
-      bed_size_cm || null,
+      bed_type,
+      bed_size_cm ?? null,
       !!is_active,
       notes || null,
     ],
-    { label: "kost.roomTypes.insertRoomType" }
+    { label: "kost.roomTypes.insertRoomType" },
   );
 
   return result.rows[0];
@@ -105,19 +109,19 @@ async function updateRoomType(id, payload) {
       base_monthly_price ?? 0,
       deposit_amount ?? 0,
       !!is_capsule,
-      room_width_m || null,
-      room_length_m || null,
-      bathroom_location || null,
-      bathroom_width_m || null,
-      bathroom_length_m || null,
+      room_width_m ?? null,
+      room_length_m ?? null,
+      bathroom_location,
+      bathroom_width_m ?? null,
+      bathroom_length_m ?? null,
       !!has_ac,
       !!has_fan,
-      bed_type || null,
-      bed_size_cm || null,
+      bed_type,
+      bed_size_cm ?? null,
       !!is_active,
       notes || null,
     ],
-    { label: "kost.roomTypes.updateRoomType" }
+    { label: "kost.roomTypes.updateRoomType" },
   );
 
   return result.rows[0] || null;
@@ -128,13 +132,24 @@ async function updateRoomType(id, payload) {
  * Returns { id, is_active } if SQL returns it.
  */
 async function toggleRoomTypeActive(id) {
-  const result = await query(
-    sql.rooms.toggleRoomTypeActive,
-    [id],
-    { label: "kost.roomTypes.toggleRoomTypeActive" }
-  );
+  const result = await query(sql.rooms.toggleRoomTypeActive, [id], {
+    label: "kost.roomTypes.toggleRoomTypeActive",
+  });
+  return result.rows[0] || null;
+}
 
-  return result.rows[0];
+async function setRoomTypeActive(id, isActive) {
+  const result = await query(sql.rooms.setRoomTypeActive, [id, isActive], {
+    label: "kost.roomTypes.setRoomTypeActive",
+  });
+  return result.rows[0] || null;
+}
+
+async function deactivateRoomType(id) {
+  const result = await query(sql.rooms.deactivateRoomType, [id], {
+    label: "kost.roomTypes.deactivateRoomType",
+  });
+  return result.rows[0] || null;
 }
 
 module.exports = {
@@ -143,4 +158,6 @@ module.exports = {
   insertRoomType,
   updateRoomType,
   toggleRoomTypeActive,
+  setRoomTypeActive,
+  deactivateRoomType,
 };

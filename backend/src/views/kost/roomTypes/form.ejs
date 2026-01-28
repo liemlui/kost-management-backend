@@ -98,11 +98,15 @@
 
 <div class="col-md-3">
   <label class="form-label">Bed Type</label>
-  <select name="bed_type" class="form-select">
-    <option value="" <%= !form.bed_type ? "selected" : "" %>>-</option>
-    <option value="FOAM" <%= form.bed_type === "FOAM" ? "selected" : "" %>>FOAM</option>
-    <option value="SPRINGBED" <%= form.bed_type === "SPRINGBED" ? "selected" : "" %>>SPRINGBED</option>
-  </select>
+<select name="bed_type" class="form-select">
+  <option value="FOAM" <%= form.bed_type === "FOAM" ? "selected" : "" %>>
+    FOAM
+  </option>
+  <option value="SPRINGBED" <%= form.bed_type === "SPRINGBED" ? "selected" : "" %>>
+    SPRINGBED
+  </option>
+</select>
+
 </div>
 
 

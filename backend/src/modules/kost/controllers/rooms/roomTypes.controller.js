@@ -63,7 +63,20 @@ async function list(req, res) {
 }
 
 async function showNew(req, res) {
-  res.render("kost/roomTypes/form", {
+  const flash = req.session?.roomTypesFlash;
+  if (req.session) req.session.roomTypesFlash = null;
+
+  if (flash) {
+    return res.render("kost/roomTypes/form", {
+      title: "New Room Type",
+      mode: "new",
+      action: "/admin/kost/room-types",
+      errors: flash.errors || [],
+      form: flash.form || {},
+    });
+  }
+
+  return res.render("kost/roomTypes/form", {
     title: "New Room Type",
     mode: "new",
     action: "/admin/kost/room-types",
@@ -89,6 +102,7 @@ async function showNew(req, res) {
   });
 }
 
+
 async function create(req, res) {
   const errors = [];
   const form = {
@@ -113,16 +127,6 @@ async function create(req, res) {
   if (!form.code) errors.push("Code is required.");
   if (!form.name) errors.push("Name is required.");
 
-  if (errors.length) {
-    return res.status(400).render("kost/roomTypes/form", {
-      title: "New Room Type",
-      mode: "new",
-      action: "/admin/kost/room-types",
-      errors,
-      form,
-    });
-  }
-
   const allowedBedTypes = new Set(["FOAM", "SPRINGBED"]);
   let bed_type = (form.bed_type || "").trim().toUpperCase();
   if (!bed_type) bed_type = null;
@@ -131,11 +135,14 @@ async function create(req, res) {
     errors.push("Bed type must be FOAM or SPRINGBED.");
   }
 
-  // NEW: normalize bathroom + enforce INSIDE required
   const bath = normalizeBathroom(form, errors);
 
-  // NEW: stop and render if errors exist (bed_type/bathroom/others)
   if (errors.length) {
+    if (req.session) {
+      req.session.roomTypesFlash = { errors, form: { ...form, ...bath } };
+      return res.redirect("/admin/kost/room-types/new");
+    }
+
     return res.status(400).render("kost/roomTypes/form", {
       title: "New Room Type",
       mode: "new",
@@ -164,9 +171,32 @@ async function create(req, res) {
     notes: form.notes || null,
   };
 
-  const result = await repo.insertRoomType(payload);
-  return res.redirect(`/admin/kost/room-types/${result.id}/edit`);
+  try {
+    await repo.insertRoomType(payload);
+    return res.redirect("/admin/kost/room-types");
+  } catch (err) {
+    if (err && err.code === "23505") {
+      const dupErrors = ["Code already exists. Please use a different code."];
+
+      if (req.session) {
+        req.session.roomTypesFlash = { errors: dupErrors, form: { ...form, ...bath } };
+        return res.redirect("/admin/kost/room-types/new");
+      }
+
+      return res.status(400).render("kost/roomTypes/form", {
+        title: "New Room Type",
+        mode: "new",
+        action: "/admin/kost/room-types",
+        errors: dupErrors,
+        form: { ...form, ...bath },
+      });
+    }
+
+    throw err;
+  }
 }
+
+
 
 async function showEdit(req, res) {
   const id = req.params.id;
