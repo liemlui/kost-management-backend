@@ -33,7 +33,8 @@
           <th>Name</th>
           <th class="text-end" style="width: 160px">Base Price</th>
           <th class="text-end" style="width: 160px">Deposit</th>
-
+          <th class="text-end" style="width: 110px">Rooms</th>
+  
           <th style="width: 90px">AC</th>
           <th style="width: 90px">Fan</th>
           <th style="width: 110px">Capsule</th>
@@ -43,7 +44,7 @@
       <tbody>
         <% if (!roomTypes || roomTypes.length === 0) { %>
         <tr>
-          <td colspan="10" class="text-muted">No room types yet.</td>
+          <td colspan="11" class="text-muted">No room types yet.</td>
         </tr>
         <% } %> <% (roomTypes || []).forEach(rt => { %>
         <tr>
@@ -63,6 +64,15 @@
           </td>
           <td class="text-end">
             Rp <%= Number(rt.deposit_amount||0).toLocaleString("id-ID") %>
+          </td>
+          <td class="text-end">
+            <a
+                href="/admin/kost/rooms?room_type_id=<%= rt.id %>"
+                class="text-decoration-none"
+                title="View rooms using this room type"
+              >
+                <span class="badge bg-dark"><%= Number(rt.rooms_count || 0) %></span>
+              </a>          
           </td>
 
           <td><%= rt.has_ac ? "Yes" : "No" %></td>

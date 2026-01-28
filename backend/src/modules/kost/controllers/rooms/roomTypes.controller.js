@@ -58,9 +58,10 @@ function toBool(v) {
 }
 
 async function list(req, res) {
-  const roomTypes = await repo.listRoomTypes();
+  const roomTypes = await repo.listRoomTypesWithRoomCount();
   res.render("kost/roomTypes/index", { title: "Room Types", roomTypes });
 }
+
 
 async function showNew(req, res) {
   const flash = req.session?.flash;

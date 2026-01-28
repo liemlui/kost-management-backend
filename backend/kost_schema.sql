@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ynSLom8BSfrD6tNP5Qqg1BIVwehMSDge3EVAtEdizbt7aIEdujfoehtiDMV5XEh
+\restrict WKzBHMyHJqZmRrMUPFl7H7hVfAThN7NUrbfr82adYuXUtC10WjUEx6wOkn2wjR8
 
 -- Dumped from database version 18.1
 -- Dumped by pg_dump version 18.1
@@ -29,6 +29,19 @@ CREATE SCHEMA kost;
 ALTER SCHEMA kost OWNER TO postgres;
 
 --
+-- Name: room_asset_status; Type: TYPE; Schema: kost; Owner: postgres
+--
+
+CREATE TYPE kost.room_asset_status AS ENUM (
+    'IN_ROOM',
+    'IN_REPAIR',
+    'REMOVED'
+);
+
+
+ALTER TYPE kost.room_asset_status OWNER TO postgres;
+
+--
 -- Name: fn_recompute_invoice_total(bigint); Type: FUNCTION; Schema: kost; Owner: postgres
 --
 
@@ -52,6 +65,31 @@ $$;
 ALTER FUNCTION kost.fn_recompute_invoice_total(p_invoice_id bigint) OWNER TO postgres;
 
 --
+-- Name: fn_room_assets_touch_and_enforce(); Type: FUNCTION; Schema: kost; Owner: postgres
+--
+
+CREATE FUNCTION kost.fn_room_assets_touch_and_enforce() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  -- Auto stamp updated_at
+  NEW.updated_at := NOW();
+
+  -- Enforce: kalau REMOVED, removed_at harus terisi (auto isi kalau null)
+  IF NEW.status = 'REMOVED' THEN
+    IF NEW.removed_at IS NULL THEN
+      NEW.removed_at := NOW();
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION kost.fn_room_assets_touch_and_enforce() OWNER TO postgres;
+
+--
 -- Name: set_updated_at(); Type: FUNCTION; Schema: kost; Owner: postgres
 --
 
@@ -66,6 +104,22 @@ $$;
 
 
 ALTER FUNCTION kost.set_updated_at() OWNER TO postgres;
+
+--
+-- Name: tg_set_updated_at(); Type: FUNCTION; Schema: kost; Owner: postgres
+--
+
+CREATE FUNCTION kost.tg_set_updated_at() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION kost.tg_set_updated_at() OWNER TO postgres;
 
 --
 -- Name: trg_invoice_items_recompute_total(); Type: FUNCTION; Schema: kost; Owner: postgres
@@ -401,6 +455,143 @@ ALTER SEQUENCE kost.electricity_tariffs_id_seq OWNER TO postgres;
 --
 
 ALTER SEQUENCE kost.electricity_tariffs_id_seq OWNED BY kost.electricity_tariffs.id;
+
+
+--
+-- Name: inventory_balances; Type: TABLE; Schema: kost; Owner: postgres
+--
+
+CREATE TABLE kost.inventory_balances (
+    item_id bigint NOT NULL,
+    location_id bigint NOT NULL,
+    qty_on_hand numeric DEFAULT 0 NOT NULL,
+    avg_unit_cost numeric,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE kost.inventory_balances OWNER TO postgres;
+
+--
+-- Name: inventory_items; Type: TABLE; Schema: kost; Owner: postgres
+--
+
+CREATE TABLE kost.inventory_items (
+    id bigint NOT NULL,
+    sku text,
+    name text NOT NULL,
+    category text NOT NULL,
+    item_type text NOT NULL,
+    uom text DEFAULT 'PCS'::text NOT NULL,
+    reorder_point numeric,
+    reorder_qty numeric,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE kost.inventory_items OWNER TO postgres;
+
+--
+-- Name: inventory_items_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
+--
+
+CREATE SEQUENCE kost.inventory_items_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE kost.inventory_items_id_seq OWNER TO postgres;
+
+--
+-- Name: inventory_items_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
+--
+
+ALTER SEQUENCE kost.inventory_items_id_seq OWNED BY kost.inventory_items.id;
+
+
+--
+-- Name: inventory_locations; Type: TABLE; Schema: kost; Owner: postgres
+--
+
+CREATE TABLE kost.inventory_locations (
+    id bigint NOT NULL,
+    location_type text NOT NULL,
+    room_id bigint,
+    name text NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE kost.inventory_locations OWNER TO postgres;
+
+--
+-- Name: inventory_locations_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
+--
+
+CREATE SEQUENCE kost.inventory_locations_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE kost.inventory_locations_id_seq OWNER TO postgres;
+
+--
+-- Name: inventory_locations_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
+--
+
+ALTER SEQUENCE kost.inventory_locations_id_seq OWNED BY kost.inventory_locations.id;
+
+
+--
+-- Name: inventory_movements; Type: TABLE; Schema: kost; Owner: postgres
+--
+
+CREATE TABLE kost.inventory_movements (
+    id bigint NOT NULL,
+    item_id bigint NOT NULL,
+    from_location_id bigint,
+    to_location_id bigint,
+    movement_type text NOT NULL,
+    qty numeric NOT NULL,
+    unit_cost numeric,
+    condition_after text,
+    notes text,
+    source text DEFAULT 'MANUAL'::text NOT NULL,
+    finance_txn_id bigint,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE kost.inventory_movements OWNER TO postgres;
+
+--
+-- Name: inventory_movements_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
+--
+
+CREATE SEQUENCE kost.inventory_movements_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE kost.inventory_movements_id_seq OWNER TO postgres;
+
+--
+-- Name: inventory_movements_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
+--
+
+ALTER SEQUENCE kost.inventory_movements_id_seq OWNED BY kost.inventory_movements.id;
 
 
 --
@@ -806,6 +997,51 @@ ALTER SEQUENCE kost.room_amenities_id_seq OWNED BY kost.room_amenities.id;
 
 
 --
+-- Name: room_assets; Type: TABLE; Schema: kost; Owner: postgres
+--
+
+CREATE TABLE kost.room_assets (
+    id bigint NOT NULL,
+    room_id bigint NOT NULL,
+    inventory_item_id bigint NOT NULL,
+    qty numeric(12,2) DEFAULT 1 NOT NULL,
+    status kost.room_asset_status DEFAULT 'IN_ROOM'::kost.room_asset_status NOT NULL,
+    note text,
+    assigned_at timestamp without time zone DEFAULT now() NOT NULL,
+    assigned_by bigint,
+    removed_at timestamp without time zone,
+    removed_by bigint,
+    remove_reason text,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    CONSTRAINT room_assets_qty_check CHECK ((qty > (0)::numeric))
+);
+
+
+ALTER TABLE kost.room_assets OWNER TO postgres;
+
+--
+-- Name: room_assets_id_seq; Type: SEQUENCE; Schema: kost; Owner: postgres
+--
+
+CREATE SEQUENCE kost.room_assets_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE kost.room_assets_id_seq OWNER TO postgres;
+
+--
+-- Name: room_assets_id_seq; Type: SEQUENCE OWNED BY; Schema: kost; Owner: postgres
+--
+
+ALTER SEQUENCE kost.room_assets_id_seq OWNED BY kost.room_assets.id;
+
+
+--
 -- Name: room_types; Type: TABLE; Schema: kost; Owner: postgres
 --
 
@@ -821,7 +1057,7 @@ CREATE TABLE kost.room_types (
     bathroom_length_m numeric(4,2),
     has_ac boolean DEFAULT false NOT NULL,
     has_fan boolean DEFAULT false NOT NULL,
-    bed_type text,
+    bed_type text NOT NULL,
     bed_size_cm smallint,
     base_monthly_price numeric(14,2) DEFAULT 0 NOT NULL,
     deposit_amount numeric(14,2) DEFAULT 0 NOT NULL,
@@ -831,8 +1067,9 @@ CREATE TABLE kost.room_types (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT chk_room_types_bathroom_location CHECK ((bathroom_location = ANY (ARRAY['INSIDE'::text, 'OUTSIDE'::text]))),
     CONSTRAINT chk_room_types_bathroom_size_logic CHECK (((bathroom_location = 'INSIDE'::text) OR ((bathroom_width_m IS NULL) AND (bathroom_length_m IS NULL)))),
+    CONSTRAINT chk_room_types_bathroom_size_required CHECK (((bathroom_location <> 'INSIDE'::text) OR ((bathroom_width_m IS NOT NULL) AND (bathroom_length_m IS NOT NULL)))),
     CONSTRAINT chk_room_types_bed_size_range CHECK (((bed_size_cm IS NULL) OR ((bed_size_cm >= 60) AND (bed_size_cm <= 220)))),
-    CONSTRAINT chk_room_types_bed_type CHECK (((bed_type IS NULL) OR (bed_type = ANY (ARRAY['FOAM'::text, 'SPRINGBED'::text])))),
+    CONSTRAINT chk_room_types_bed_type CHECK ((bed_type = ANY (ARRAY['FOAM'::text, 'SPRINGBED'::text]))),
     CONSTRAINT chk_room_types_price_nonnegative CHECK (((base_monthly_price >= (0)::numeric) AND (deposit_amount >= (0)::numeric))),
     CONSTRAINT chk_room_types_room_length_positive CHECK (((room_length_m IS NULL) OR (room_length_m > (0)::numeric))),
     CONSTRAINT chk_room_types_room_width_positive CHECK (((room_width_m IS NULL) OR (room_width_m > (0)::numeric)))
@@ -1395,6 +1632,27 @@ ALTER TABLE ONLY kost.electricity_tariffs ALTER COLUMN id SET DEFAULT nextval('k
 
 
 --
+-- Name: inventory_items id; Type: DEFAULT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_items ALTER COLUMN id SET DEFAULT nextval('kost.inventory_items_id_seq'::regclass);
+
+
+--
+-- Name: inventory_locations id; Type: DEFAULT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_locations ALTER COLUMN id SET DEFAULT nextval('kost.inventory_locations_id_seq'::regclass);
+
+
+--
+-- Name: inventory_movements id; Type: DEFAULT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_movements ALTER COLUMN id SET DEFAULT nextval('kost.inventory_movements_id_seq'::regclass);
+
+
+--
 -- Name: invoice_electricity id; Type: DEFAULT; Schema: kost; Owner: postgres
 --
 
@@ -1455,6 +1713,13 @@ ALTER TABLE ONLY kost.payment_verifications ALTER COLUMN id SET DEFAULT nextval(
 --
 
 ALTER TABLE ONLY kost.room_amenities ALTER COLUMN id SET DEFAULT nextval('kost.room_amenities_id_seq'::regclass);
+
+
+--
+-- Name: room_assets id; Type: DEFAULT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.room_assets ALTER COLUMN id SET DEFAULT nextval('kost.room_assets_id_seq'::regclass);
 
 
 --
@@ -1593,6 +1858,46 @@ ALTER TABLE ONLY kost.electricity_tariffs
 
 
 --
+-- Name: inventory_balances inventory_balances_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_balances
+    ADD CONSTRAINT inventory_balances_pkey PRIMARY KEY (item_id, location_id);
+
+
+--
+-- Name: inventory_items inventory_items_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_items
+    ADD CONSTRAINT inventory_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: inventory_items inventory_items_sku_key; Type: CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_items
+    ADD CONSTRAINT inventory_items_sku_key UNIQUE (sku);
+
+
+--
+-- Name: inventory_locations inventory_locations_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_locations
+    ADD CONSTRAINT inventory_locations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: inventory_movements inventory_movements_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_movements
+    ADD CONSTRAINT inventory_movements_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: invoice_electricity invoice_electricity_invoice_id_key; Type: CONSTRAINT; Schema: kost; Owner: postgres
 --
 
@@ -1678,6 +1983,14 @@ ALTER TABLE ONLY kost.payment_verifications
 
 ALTER TABLE ONLY kost.room_amenities
     ADD CONSTRAINT room_amenities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: room_assets room_assets_pkey; Type: CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.room_assets
+    ADD CONSTRAINT room_assets_pkey PRIMARY KEY (id);
 
 
 --
@@ -1806,14 +2119,6 @@ ALTER TABLE ONLY kost.payment_submission_files
 
 ALTER TABLE ONLY kost.room_amenities
     ADD CONSTRAINT uniq_room_amenities_room_amenity UNIQUE (room_id, amenity_id);
-
-
---
--- Name: room_types uniq_room_types_code; Type: CONSTRAINT; Schema: kost; Owner: postgres
---
-
-ALTER TABLE ONLY kost.room_types
-    ADD CONSTRAINT uniq_room_types_code UNIQUE (code);
 
 
 --
@@ -2086,6 +2391,34 @@ CREATE INDEX idx_room_amenities_room_id ON kost.room_amenities USING btree (room
 
 
 --
+-- Name: idx_room_assets_assigned_at; Type: INDEX; Schema: kost; Owner: postgres
+--
+
+CREATE INDEX idx_room_assets_assigned_at ON kost.room_assets USING btree (assigned_at DESC);
+
+
+--
+-- Name: idx_room_assets_inventory_item_id; Type: INDEX; Schema: kost; Owner: postgres
+--
+
+CREATE INDEX idx_room_assets_inventory_item_id ON kost.room_assets USING btree (inventory_item_id);
+
+
+--
+-- Name: idx_room_assets_room_id; Type: INDEX; Schema: kost; Owner: postgres
+--
+
+CREATE INDEX idx_room_assets_room_id ON kost.room_assets USING btree (room_id);
+
+
+--
+-- Name: idx_room_assets_status; Type: INDEX; Schema: kost; Owner: postgres
+--
+
+CREATE INDEX idx_room_assets_status ON kost.room_assets USING btree (status);
+
+
+--
 -- Name: idx_room_types_is_active; Type: INDEX; Schema: kost; Owner: postgres
 --
 
@@ -2345,6 +2678,13 @@ CREATE UNIQUE INDEX uniq_payment_verifications_submission_id ON kost.payment_ver
 
 
 --
+-- Name: uniq_room_assets_active_in_room; Type: INDEX; Schema: kost; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uniq_room_assets_active_in_room ON kost.room_assets USING btree (room_id, inventory_item_id) WHERE (status = 'IN_ROOM'::kost.room_asset_status);
+
+
+--
 -- Name: uniq_stays_active_room; Type: INDEX; Schema: kost; Owner: postgres
 --
 
@@ -2394,10 +2734,24 @@ CREATE TRIGGER trg_payment_submissions_set_updated_at BEFORE UPDATE ON kost.paym
 
 
 --
+-- Name: room_assets trg_room_assets_touch_and_enforce; Type: TRIGGER; Schema: kost; Owner: postgres
+--
+
+CREATE TRIGGER trg_room_assets_touch_and_enforce BEFORE INSERT OR UPDATE ON kost.room_assets FOR EACH ROW EXECUTE FUNCTION kost.fn_room_assets_touch_and_enforce();
+
+
+--
 -- Name: room_types trg_room_types_set_updated_at; Type: TRIGGER; Schema: kost; Owner: postgres
 --
 
 CREATE TRIGGER trg_room_types_set_updated_at BEFORE UPDATE ON kost.room_types FOR EACH ROW EXECUTE FUNCTION kost.set_updated_at();
+
+
+--
+-- Name: room_types trg_room_types_updated_at; Type: TRIGGER; Schema: kost; Owner: postgres
+--
+
+CREATE TRIGGER trg_room_types_updated_at BEFORE UPDATE ON kost.room_types FOR EACH ROW EXECUTE FUNCTION kost.tg_set_updated_at();
 
 
 --
@@ -2553,6 +2907,54 @@ ALTER TABLE ONLY kost.tenants
 
 ALTER TABLE ONLY kost.tenants
     ADD CONSTRAINT fk_tenants_updated_by FOREIGN KEY (updated_by) REFERENCES kost.users(id) ON UPDATE RESTRICT ON DELETE SET NULL;
+
+
+--
+-- Name: inventory_balances inventory_balances_item_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_balances
+    ADD CONSTRAINT inventory_balances_item_id_fkey FOREIGN KEY (item_id) REFERENCES kost.inventory_items(id);
+
+
+--
+-- Name: inventory_balances inventory_balances_location_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_balances
+    ADD CONSTRAINT inventory_balances_location_id_fkey FOREIGN KEY (location_id) REFERENCES kost.inventory_locations(id);
+
+
+--
+-- Name: inventory_locations inventory_locations_room_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_locations
+    ADD CONSTRAINT inventory_locations_room_id_fkey FOREIGN KEY (room_id) REFERENCES kost.rooms(id);
+
+
+--
+-- Name: inventory_movements inventory_movements_from_location_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_movements
+    ADD CONSTRAINT inventory_movements_from_location_id_fkey FOREIGN KEY (from_location_id) REFERENCES kost.inventory_locations(id);
+
+
+--
+-- Name: inventory_movements inventory_movements_item_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_movements
+    ADD CONSTRAINT inventory_movements_item_id_fkey FOREIGN KEY (item_id) REFERENCES kost.inventory_items(id);
+
+
+--
+-- Name: inventory_movements inventory_movements_to_location_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.inventory_movements
+    ADD CONSTRAINT inventory_movements_to_location_id_fkey FOREIGN KEY (to_location_id) REFERENCES kost.inventory_locations(id);
 
 
 --
@@ -2724,6 +3126,22 @@ ALTER TABLE ONLY kost.room_amenities
 
 
 --
+-- Name: room_assets room_assets_inventory_item_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.room_assets
+    ADD CONSTRAINT room_assets_inventory_item_id_fkey FOREIGN KEY (inventory_item_id) REFERENCES kost.inventory_items(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: room_assets room_assets_room_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
+--
+
+ALTER TABLE ONLY kost.room_assets
+    ADD CONSTRAINT room_assets_room_id_fkey FOREIGN KEY (room_id) REFERENCES kost.rooms(id) ON DELETE RESTRICT;
+
+
+--
 -- Name: rooms rooms_room_type_id_fkey; Type: FK CONSTRAINT; Schema: kost; Owner: postgres
 --
 
@@ -2855,5 +3273,5 @@ ALTER TABLE ONLY kost.tickets
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ynSLom8BSfrD6tNP5Qqg1BIVwehMSDge3EVAtEdizbt7aIEdujfoehtiDMV5XEh
+\unrestrict WKzBHMyHJqZmRrMUPFl7H7hVfAThN7NUrbfr82adYuXUtC10WjUEx6wOkn2wjR8
 
