@@ -1,21 +1,25 @@
 // modules/kost/sql/rooms/roomTypes.sql.js
 module.exports = {
   listRoomTypes: `
-    SELECT
-      id, code, name,
-      base_monthly_price, deposit_amount,
-      is_capsule,
-      room_width_m, room_length_m,
-      bathroom_location, bathroom_width_m, bathroom_length_m,
-      has_ac, has_fan,
-      bed_type, bed_size_cm,
-      is_active,
-      notes,
-      created_at,
-      updated_at
-    FROM kost.room_types
-    ORDER BY code ASC;
-  `,
+  SELECT
+    rt.id, rt.code, rt.name,
+    rt.base_monthly_price, rt.deposit_amount,
+    rt.is_capsule,
+    rt.room_width_m, rt.room_length_m,
+    rt.bathroom_location, rt.bathroom_width_m, rt.bathroom_length_m,
+    rt.has_ac, rt.has_fan,
+    rt.bed_type, rt.bed_size_cm,
+    rt.is_active,
+    rt.notes,
+    rt.created_at,
+    rt.updated_at,
+    COUNT(r.id)::int AS rooms_count
+  FROM kost.room_types rt
+  LEFT JOIN kost.rooms r
+    ON r.room_type_id = rt.id
+  GROUP BY rt.id
+  ORDER BY rt.code ASC;
+`,
 
   getRoomTypeById: `
     SELECT
@@ -117,7 +121,7 @@ module.exports = {
   FROM kost.rooms
   WHERE room_type_id = $1;
 `,
-listRoomTypesWithRoomCount: `
+  listRoomTypesWithRoomCount: `
   SELECT
     rt.id, rt.code, rt.name,
     rt.base_monthly_price, rt.deposit_amount,
@@ -137,5 +141,4 @@ listRoomTypesWithRoomCount: `
   GROUP BY rt.id
   ORDER BY rt.code ASC;
 `,
-
 };

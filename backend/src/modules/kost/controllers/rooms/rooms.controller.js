@@ -37,18 +37,35 @@ function validateRoomPayload(p) {
   if (!STATUS_OPTIONS.includes(p.status)) errors.push("Status tidak valid.");
   return errors;
 }
-
+function parseIntOrNull(v) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (s === "") return null;
+  const n = Number.parseInt(s, 10);
+  return Number.isFinite(n) ? n : null;
+}
 async function index(req, res, next) {
   try {
-    const rooms = await roomRepo.listRooms(); // ✅ repo returns rows[]
+    const roomTypeId = parseIntOrNull(req.query.room_type_id);
+
+    const [rooms, roomTypes] = await Promise.all([
+      roomRepo.listRooms(roomTypeId),
+      roomRepo.listRoomTypes(), // aktif saja (repo sudah filter)
+    ]);
+
     res.render("kost/rooms/index", {
       title: "Rooms",
       rooms,
+      roomTypes,
+      filters: {
+        room_type_id: roomTypeId,
+      },
     });
   } catch (err) {
     next(err);
   }
 }
+
 
 async function showNewForm(req, res, next) {
   try {
@@ -276,8 +293,6 @@ async function changeRoomType(req, res, next) {
     next(err);
   }
 }
-
-
 
 module.exports = {
   index,

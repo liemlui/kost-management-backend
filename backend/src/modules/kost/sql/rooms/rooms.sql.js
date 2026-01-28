@@ -25,6 +25,8 @@ module.exports = {
       LEFT JOIN kost.stays s
       ON s.room_id = r.id
     AND s.status = 'ACTIVE'
+    WHERE ($1::int IS NULL OR r.room_type_id = $1::int)
+
     ORDER BY r.floor, r.code;
   `,
 

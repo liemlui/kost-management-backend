@@ -16,19 +16,29 @@ function assertNumberId(id, label) {
   return n;
 }
 
-async function listRooms() {
-  const { rows } = await q(sql.rooms.listRooms, [], "kost.rooms.listRooms");
-  return rows;
+async function listRooms(roomTypeId = null) {
+  const result = await query(sql.rooms.listRooms, [roomTypeId], {
+    label: "kost.rooms.listRooms",
+  });
+  return result.rows;
 }
 
 async function listRoomTypes() {
-  const { rows } = await q(sql.rooms.listRoomTypes, [], "kost.room_types.listRoomTypes");
+  const { rows } = await q(
+    sql.rooms.listRoomTypes,
+    [],
+    "kost.room_types.listRoomTypes",
+  );
   return rows.filter((r) => r.is_active);
 }
 
 async function getRoomById(id) {
   const roomId = assertNumberId(id, "kost.rooms.getRoomById");
-  const { rows } = await q(sql.rooms.getRoomById, [roomId], "kost.rooms.getRoomById");
+  const { rows } = await q(
+    sql.rooms.getRoomById,
+    [roomId],
+    "kost.rooms.getRoomById",
+  );
   return rows[0] || null;
 }
 
@@ -41,7 +51,11 @@ async function insertRoom(payload) {
     payload.status,
     payload.notes,
   ];
-  const { rows } = await q(sql.rooms.insertRoom, params, "kost.rooms.insertRoom");
+  const { rows } = await q(
+    sql.rooms.insertRoom,
+    params,
+    "kost.rooms.insertRoom",
+  );
   return rows[0];
 }
 
@@ -56,36 +70,53 @@ async function updateRoom({ id, ...payload }) {
     payload.status,
     payload.notes,
   ];
-  const { rows } = await q(sql.rooms.updateRoom, params, "kost.rooms.updateRoom");
+  const { rows } = await q(
+    sql.rooms.updateRoom,
+    params,
+    "kost.rooms.updateRoom",
+  );
   return rows[0] || null;
 }
 
 async function deleteRoom(id) {
   const roomId = assertNumberId(id, "kost.rooms.deleteRoom");
-  const result = await q(sql.rooms.deleteRoom, [roomId], "kost.rooms.deleteRoom");
+  const result = await q(
+    sql.rooms.deleteRoom,
+    [roomId],
+    "kost.rooms.deleteRoom",
+  );
   return { rowCount: result.rowCount };
 }
 
 async function blockRoom(id) {
   const roomId = assertNumberId(id, "kost.rooms.blockRoom");
-  const { rows } = await q(sql.rooms.blockRoom, [roomId], "kost.rooms.blockRoom");
+  const { rows } = await q(
+    sql.rooms.blockRoom,
+    [roomId],
+    "kost.rooms.blockRoom",
+  );
   return rows[0];
 }
 
 async function unblockRoom(id) {
   const roomId = assertNumberId(id, "kost.rooms.unblockRoom");
-  const { rows } = await q(sql.rooms.unblockRoom, [roomId], "kost.rooms.unblockRoom");
+  const { rows } = await q(
+    sql.rooms.unblockRoom,
+    [roomId],
+    "kost.rooms.unblockRoom",
+  );
   return rows[0];
 }
 
 function updateRoomType(roomId, roomTypeId) {
   const rid = assertNumberId(roomId, "kost.rooms.updateRoomType.roomId");
-  const rtid = assertNumberId(roomTypeId, "kost.rooms.updateRoomType.roomTypeId");
-  return query(
-    sql.rooms.updateRoomTypeForRoom,
-    [rid, rtid],
-    { label: "kost.rooms.updateRoomType" }
-  ).then((r) => r.rows[0] || null);
+  const rtid = assertNumberId(
+    roomTypeId,
+    "kost.rooms.updateRoomType.roomTypeId",
+  );
+  return query(sql.rooms.updateRoomTypeForRoom, [rid, rtid], {
+    label: "kost.rooms.updateRoomType",
+  }).then((r) => r.rows[0] || null);
 }
 
 module.exports = {

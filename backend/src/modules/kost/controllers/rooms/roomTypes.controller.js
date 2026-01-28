@@ -58,10 +58,40 @@ function toBool(v) {
 }
 
 async function list(req, res) {
-  const roomTypes = await repo.listRoomTypesWithRoomCount();
-  res.render("kost/roomTypes/index", { title: "Room Types", roomTypes });
-}
+  const roomTypes = await repo.listRoomTypes();
 
+  const total_types = roomTypes.length;
+  const active_types = roomTypes.filter((rt) => rt.is_active).length;
+  const inactive_types = total_types - active_types;
+
+  const used_types = roomTypes.filter(
+    (rt) => Number(rt.rooms_count || 0) > 0,
+  ).length;
+  const unused_types = total_types - used_types;
+
+  const total_rooms = roomTypes.reduce(
+    (acc, rt) => acc + Number(rt.rooms_count || 0),
+    0,
+  );
+
+  const top_used = [...roomTypes]
+    .sort((a, b) => Number(b.rooms_count || 0) - Number(a.rooms_count || 0))
+    .slice(0, 5);
+
+  res.render("kost/roomTypes/index", {
+    title: "Room Types",
+    roomTypes,
+    usage: {
+      total_types,
+      active_types,
+      inactive_types,
+      used_types,
+      unused_types,
+      total_rooms,
+      top_used,
+    },
+  });
+}
 
 async function showNew(req, res) {
   const flash = req.session?.flash;
