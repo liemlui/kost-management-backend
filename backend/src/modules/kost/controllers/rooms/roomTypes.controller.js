@@ -1,18 +1,12 @@
 // modules/kost/controllers/rooms/roomTypes.controller.js
 const repo = require("../../repos/rooms/roomTypes.repo");
+const { toIntOrNull, toBool } = require("../../../../shared/parsers");
 
 function parseNum(v) {
   if (v === null || v === undefined) return null;
   const s = String(v).trim();
-  if (s === "" || s.toLowerCase() === "false") return null; // <- penting
+  if (s === "" || s.toLowerCase() === "false") return null; // <- penting (placeholder select)
   const n = Number(s);
-  return Number.isFinite(n) ? n : null;
-}
-function parseIntOrNull(v) {
-  if (v === null || v === undefined) return null;
-  const s = String(v).trim();
-  if (s === "" || s.toLowerCase() === "false") return null;
-  const n = Number.parseInt(s, 10);
   return Number.isFinite(n) ? n : null;
 }
 
@@ -36,7 +30,7 @@ function normalizeBathroom(form, errors) {
 
   if (bw === null || bl === null) {
     errors.push(
-      "Bathroom width & length are required when Bathroom Location is INSIDE.",
+      "Bathroom width & length are required when Bathroom Location is INSIDE."
     );
   }
 
@@ -47,16 +41,6 @@ function normalizeBathroom(form, errors) {
   };
 }
 
-function toBool(v) {
-  // checkbox HTML biasanya: undefined (unchecked) / "1" / "on" / "true" (checked)
-  if (v === true) return true;
-  if (v === false) return false;
-  if (v === null || v === undefined) return false;
-
-  const s = String(v).trim().toLowerCase();
-  return s === "1" || s === "true" || s === "on" || s === "yes";
-}
-
 async function list(req, res) {
   const roomTypes = await repo.listRoomTypes();
 
@@ -64,14 +48,12 @@ async function list(req, res) {
   const active_types = roomTypes.filter((rt) => rt.is_active).length;
   const inactive_types = total_types - active_types;
 
-  const used_types = roomTypes.filter(
-    (rt) => Number(rt.rooms_count || 0) > 0,
-  ).length;
+  const used_types = roomTypes.filter((rt) => Number(rt.rooms_count || 0) > 0).length;
   const unused_types = total_types - used_types;
 
   const total_rooms = roomTypes.reduce(
     (acc, rt) => acc + Number(rt.rooms_count || 0),
-    0,
+    0
   );
 
   const top_used = [...roomTypes]
@@ -170,7 +152,7 @@ async function create(req, res) {
 
   if (errors.length) {
     if (req.session) {
-      req.session.flash = { errors: dupErrors, form: { ...form, ...bath } };
+      req.session.flash = { errors, form: { ...form, ...bath } };
       return res.redirect("/admin/kost/room-types/new");
     }
 
@@ -197,7 +179,7 @@ async function create(req, res) {
     has_ac: toBool(form.has_ac),
     has_fan: toBool(form.has_fan),
     bed_type: bed_type,
-    bed_size_cm: parseIntOrNull(form.bed_size_cm),
+    bed_size_cm: toIntOrNull(form.bed_size_cm),
     is_active: toBool(form.is_active),
     notes: form.notes || null,
   };
@@ -298,6 +280,7 @@ async function update(req, res) {
       form,
     });
   }
+
   const allowedBedTypes = new Set(["FOAM", "SPRINGBED"]);
   let bed_type = (form.bed_type || "").trim().toUpperCase();
 
@@ -333,7 +316,7 @@ async function update(req, res) {
     has_ac: toBool(form.has_ac),
     has_fan: toBool(form.has_fan),
     bed_type: bed_type,
-    bed_size_cm: parseIntOrNull(form.bed_size_cm),
+    bed_size_cm: toIntOrNull(form.bed_size_cm),
     is_active: toBool(form.is_active),
     notes: form.notes || null,
   };
@@ -342,6 +325,7 @@ async function update(req, res) {
   if (!result) return res.status(404).send("Room type not found");
   return res.redirect(`/admin/kost/room-types`);
 }
+
 async function toggleActive(req, res) {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
