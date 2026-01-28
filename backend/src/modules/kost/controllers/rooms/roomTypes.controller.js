@@ -308,5 +308,19 @@ async function update(req, res) {
   if (!result) return res.status(404).send("Room type not found");
   return res.redirect(`/admin/kost/room-types`);
 }
+async function toggleActive(req, res) {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    return res.status(400).send("Invalid room type id");
+  }
 
-module.exports = { list, showNew, create, showEdit, update };
+  const row = await repo.toggleRoomTypeActive(id);
+  if (!row) {
+    return res.status(404).send("Room type not found");
+  }
+
+  return res.redirect("/admin/kost/room-types");
+}
+
+
+module.exports = { list, showNew, create, showEdit, update, toggleActive };

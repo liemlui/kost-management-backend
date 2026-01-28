@@ -28,7 +28,7 @@
       <tbody>
         <% if (!roomTypes || roomTypes.length === 0) { %>
         <tr>
-          <td colspan="8" class="text-muted">No room types yet.</td>
+          <td colspan="10" class="text-muted">No room types yet.</td>
         </tr>
         <% } %> <% (roomTypes || []).forEach(rt => { %>
         <tr>
@@ -59,6 +59,19 @@
               href="/admin/kost/room-types/<%= rt.id %>/edit"
               >Edit</a
             >
+              <form
+              method="POST"
+              action="/admin/kost/room-types/<%= rt.id %>/toggle-active"
+              class="d-inline"
+            >
+              <button
+                type="submit"
+                class="btn btn-sm <%= rt.is_active ? "btn-outline-danger" : "btn-outline-success" %>"
+                onclick="return confirm('<%= rt.is_active ? "Deactivate" : "Activate" %> room type <%= rt.code %>?');"
+              >
+                <%= rt.is_active ? "Deactivate" : "Activate" %>
+              </button>
+            </form>
           </td>
         </tr>
         <% }) %>

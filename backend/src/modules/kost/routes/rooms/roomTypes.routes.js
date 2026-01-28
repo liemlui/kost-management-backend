@@ -8,5 +8,7 @@ router.get("/new", ctrl.showNew);
 router.post("/", ctrl.create);
 router.get("/:id/edit", ctrl.showEdit);
 router.post("/:id", ctrl.update);
+router.post("/:id/toggle-active", ctrl.toggleActive);
+
 
 module.exports = router;

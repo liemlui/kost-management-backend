@@ -91,26 +91,25 @@ module.exports = {
   WHERE id = $1
   RETURNING id, room_type_id;
 `,
-toggleRoomTypeActive: `
+  toggleRoomTypeActive: `
   UPDATE kost.room_types
   SET is_active = NOT is_active
   WHERE id = $1
   RETURNING id, is_active;
 `,
 
-setRoomTypeActive: `
+  setRoomTypeActive: `
   UPDATE kost.room_types
   SET is_active = $2
   WHERE id = $1
   RETURNING id, is_active;
 `,
 
-// Optional: "delete" versi aman = deactivate
-deactivateRoomType: `
+  // Optional: "delete" versi aman = deactivate
+  deactivateRoomType: `
   UPDATE kost.room_types
   SET is_active = false
   WHERE id = $1
   RETURNING id, is_active;
 `,
-
 };
