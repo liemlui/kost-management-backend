@@ -4,9 +4,47 @@ const repo = require("../../repos/rooms/roomTypes.repo");
 function parseNum(v) {
   if (v === null || v === undefined) return null;
   const s = String(v).trim();
-  if (s === "" || s.toLowerCase() === "false") return null;  // <- penting
+  if (s === "" || s.toLowerCase() === "false") return null; // <- penting
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
+}
+function parseIntOrNull(v) {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (s === "" || s.toLowerCase() === "false") return null;
+  const n = Number.parseInt(s, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeBathroom(form, errors) {
+  // DB: bathroom_location NOT NULL, allowed INSIDE|OUTSIDE
+  let loc = (form.bathroom_location || "OUTSIDE").trim().toUpperCase();
+  if (loc !== "INSIDE" && loc !== "OUTSIDE") loc = "OUTSIDE";
+
+  if (loc === "OUTSIDE") {
+    // DB constraint: OUTSIDE => bathroom_width_m & bathroom_length_m MUST be NULL
+    return {
+      bathroom_location: "OUTSIDE",
+      bathroom_width_m: null,
+      bathroom_length_m: null,
+    };
+  }
+
+  // INSIDE => required both
+  const bw = parseNum(form.bathroom_width_m);
+  const bl = parseNum(form.bathroom_length_m);
+
+  if (bw === null || bl === null) {
+    errors.push(
+      "Bathroom width & length are required when Bathroom Location is INSIDE.",
+    );
+  }
+
+  return {
+    bathroom_location: "INSIDE",
+    bathroom_width_m: bw,
+    bathroom_length_m: bl,
+  };
 }
 
 function toBool(v) {
@@ -18,7 +56,6 @@ function toBool(v) {
   const s = String(v).trim().toLowerCase();
   return s === "1" || s === "true" || s === "on" || s === "yes";
 }
-
 
 async function list(req, res) {
   const roomTypes = await repo.listRoomTypes();
@@ -39,7 +76,7 @@ async function showNew(req, res) {
       is_capsule: false,
       room_width_m: "",
       room_length_m: "",
-      bathroom_location: "",
+      bathroom_location: "OUTSIDE",
       bathroom_width_m: "",
       bathroom_length_m: "",
       has_ac: false,
@@ -62,7 +99,7 @@ async function create(req, res) {
     is_capsule: toBool(req.body.is_capsule),
     room_width_m: req.body.room_width_m,
     room_length_m: req.body.room_length_m,
-    bathroom_location: req.body.bathroom_location || "",
+    bathroom_location: req.body.bathroom_location || "OUTSIDE",
     bathroom_width_m: req.body.bathroom_width_m,
     bathroom_length_m: req.body.bathroom_length_m,
     has_ac: toBool(req.body.has_ac),
@@ -86,14 +123,27 @@ async function create(req, res) {
     });
   }
 
-const allowedBedTypes = new Set(["FOAM", "SPRINGBED"]);
-let bed_type = (form.bed_type || "").trim().toUpperCase();
-if (!bed_type) bed_type = null;
+  const allowedBedTypes = new Set(["FOAM", "SPRINGBED"]);
+  let bed_type = (form.bed_type || "").trim().toUpperCase();
+  if (!bed_type) bed_type = null;
 
-if (bed_type && !allowedBedTypes.has(bed_type)) {
-  errors.push("Bed type must be FOAM or SPRINGBED.");
-}
+  if (bed_type && !allowedBedTypes.has(bed_type)) {
+    errors.push("Bed type must be FOAM or SPRINGBED.");
+  }
 
+  // NEW: normalize bathroom + enforce INSIDE required
+  const bath = normalizeBathroom(form, errors);
+
+  // NEW: stop and render if errors exist (bed_type/bathroom/others)
+  if (errors.length) {
+    return res.status(400).render("kost/roomTypes/form", {
+      title: "New Room Type",
+      mode: "new",
+      action: "/admin/kost/room-types",
+      errors,
+      form: { ...form, ...bath },
+    });
+  }
 
   const payload = {
     code: form.code,
@@ -103,13 +153,13 @@ if (bed_type && !allowedBedTypes.has(bed_type)) {
     is_capsule: toBool(form.is_capsule),
     room_width_m: parseNum(form.room_width_m) ?? null,
     room_length_m: parseNum(form.room_length_m) ?? null,
-    bathroom_location: form.bathroom_location ?? null,
-    bathroom_width_m: parseNum(form.bathroom_width_m) ?? null,
-    bathroom_length_m: parseNum(form.bathroom_length_m)  ?? null,
+    bathroom_location: bath.bathroom_location,
+    bathroom_width_m: bath.bathroom_width_m,
+    bathroom_length_m: bath.bathroom_length_m,
     has_ac: toBool(form.has_ac),
     has_fan: toBool(form.has_fan),
     bed_type: bed_type,
-    bed_size_cm: parseNum(form.bed_size_cm) ?? null,
+    bed_size_cm: parseIntOrNull(form.bed_size_cm),
     is_active: toBool(form.is_active),
     notes: form.notes || null,
   };
@@ -131,7 +181,7 @@ async function showEdit(req, res) {
     is_capsule: toBool(rt.is_capsule),
     room_width_m: rt.room_width_m ?? "",
     room_length_m: rt.room_length_m ?? "",
-    bathroom_location: rt.bathroom_location || "",
+    bathroom_location: rt.bathroom_location || "OUTSIDE",
     bathroom_width_m: rt.bathroom_width_m ?? "",
     bathroom_length_m: rt.bathroom_length_m ?? "",
     has_ac: toBool(rt.has_ac),
@@ -163,7 +213,7 @@ async function update(req, res) {
     is_capsule: toBool(req.body.is_capsule),
     room_width_m: req.body.room_width_m,
     room_length_m: req.body.room_length_m,
-    bathroom_location: req.body.bathroom_location || "",
+    bathroom_location: req.body.bathroom_location || "OUTSIDE",
     bathroom_width_m: req.body.bathroom_width_m,
     bathroom_length_m: req.body.bathroom_length_m,
     has_ac: toBool(req.body.has_ac),
@@ -186,14 +236,24 @@ async function update(req, res) {
       form,
     });
   }
-const allowedBedTypes = new Set(["FOAM", "SPRINGBED"]);
-let bed_type = (form.bed_type || "").trim().toUpperCase();
-if (!bed_type) bed_type = null;
+  const allowedBedTypes = new Set(["FOAM", "SPRINGBED"]);
+  let bed_type = (form.bed_type || "").trim().toUpperCase();
+  if (!bed_type) bed_type = null;
 
-if (bed_type && !allowedBedTypes.has(bed_type)) {
-  errors.push("Bed type must be FOAM or SPRINGBED.");
-}
+  if (bed_type && !allowedBedTypes.has(bed_type)) {
+    errors.push("Bed type must be FOAM or SPRINGBED.");
+  }
+  const bath = normalizeBathroom(form, errors);
 
+  if (errors.length) {
+    return res.status(400).render("kost/roomTypes/form", {
+      title: `Edit Room Type ${form.code || ""}`,
+      mode: "edit",
+      action: `/admin/kost/room-types/${id}`,
+      errors,
+      form: { ...form, ...bath },
+    });
+  }
 
   const payload = {
     code: form.code,
@@ -203,13 +263,13 @@ if (bed_type && !allowedBedTypes.has(bed_type)) {
     is_capsule: toBool(form.is_capsule),
     room_width_m: parseNum(form.room_width_m) ?? null,
     room_length_m: parseNum(form.room_length_m) ?? null,
-    bathroom_location: form.bathroom_location || null,
-    bathroom_width_m: parseNum(form.bathroom_width_m) ?? null,
-    bathroom_length_m: parseNum(form.bathroom_length_m) ?? null,
+    bathroom_location: bath.bathroom_location,
+    bathroom_width_m: bath.bathroom_width_m,
+    bathroom_length_m: bath.bathroom_length_m,
     has_ac: toBool(form.has_ac),
     has_fan: toBool(form.has_fan),
     bed_type: bed_type,
-    bed_size_cm: parseNum(form.bed_size_cm) ?? null,
+    bed_size_cm: parseIntOrNull(form.bed_size_cm),
     is_active: toBool(form.is_active),
     notes: form.notes || null,
   };

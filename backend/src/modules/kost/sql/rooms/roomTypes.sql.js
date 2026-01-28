@@ -1,6 +1,6 @@
 // modules/kost/sql/rooms/roomTypes.sql.js
 module.exports = {
-  listRoomTypesAdmin: `
+  listRoomTypes: `
     SELECT
       id, code, name,
       base_monthly_price, deposit_amount,
