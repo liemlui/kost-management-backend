@@ -63,8 +63,8 @@ async function list(req, res) {
 }
 
 async function showNew(req, res) {
-  const flash = req.session?.roomTypesFlash;
-  if (req.session) req.session.roomTypesFlash = null;
+  const flash = req.session?.flash;
+  if (req.session) req.session.flash = null;
 
   if (flash) {
     return res.render("kost/roomTypes/form", {
@@ -102,7 +102,6 @@ async function showNew(req, res) {
   });
 }
 
-
 async function create(req, res) {
   const errors = [];
   const form = {
@@ -129,9 +128,10 @@ async function create(req, res) {
 
   const allowedBedTypes = new Set(["FOAM", "SPRINGBED"]);
   let bed_type = (form.bed_type || "").trim().toUpperCase();
-  if (!bed_type) bed_type = null;
 
-  if (bed_type && !allowedBedTypes.has(bed_type)) {
+  if (!bed_type) {
+    errors.push("Bed type is required.");
+  } else if (!allowedBedTypes.has(bed_type)) {
     errors.push("Bed type must be FOAM or SPRINGBED.");
   }
 
@@ -139,7 +139,7 @@ async function create(req, res) {
 
   if (errors.length) {
     if (req.session) {
-      req.session.roomTypesFlash = { errors, form: { ...form, ...bath } };
+      req.session.flash = { errors: dupErrors, form: { ...form, ...bath } };
       return res.redirect("/admin/kost/room-types/new");
     }
 
@@ -179,7 +179,10 @@ async function create(req, res) {
       const dupErrors = ["Code already exists. Please use a different code."];
 
       if (req.session) {
-        req.session.roomTypesFlash = { errors: dupErrors, form: { ...form, ...bath } };
+        req.session.flash = {
+          errors: dupErrors,
+          form: { ...form, ...bath },
+        };
         return res.redirect("/admin/kost/room-types/new");
       }
 
@@ -195,8 +198,6 @@ async function create(req, res) {
     throw err;
   }
 }
-
-
 
 async function showEdit(req, res) {
   const id = req.params.id;
@@ -268,11 +269,13 @@ async function update(req, res) {
   }
   const allowedBedTypes = new Set(["FOAM", "SPRINGBED"]);
   let bed_type = (form.bed_type || "").trim().toUpperCase();
-  if (!bed_type) bed_type = null;
 
-  if (bed_type && !allowedBedTypes.has(bed_type)) {
+  if (!bed_type) {
+    errors.push("Bed type is required.");
+  } else if (!allowedBedTypes.has(bed_type)) {
     errors.push("Bed type must be FOAM or SPRINGBED.");
   }
+
   const bath = normalizeBathroom(form, errors);
 
   if (errors.length) {
@@ -314,13 +317,28 @@ async function toggleActive(req, res) {
     return res.status(400).send("Invalid room type id");
   }
 
-  const row = await repo.toggleRoomTypeActive(id);
-  if (!row) {
+  const rt = await repo.getRoomTypeById(id);
+  if (!rt) {
     return res.status(404).send("Room type not found");
   }
 
+  // If currently active, this toggle would deactivate it => enforce "not used by rooms"
+  if (rt.is_active) {
+    const cnt = await repo.countRoomsUsingRoomType(id);
+
+    if (cnt > 0) {
+      const msg = `Cannot deactivate room type ${rt.code} because it is used by ${cnt} room(s).`;
+
+      if (req.session) {
+        req.session.flash = { errors: [msg] };
+      }
+
+      return res.redirect("/admin/kost/room-types");
+    }
+  }
+
+  await repo.toggleRoomTypeActive(id);
   return res.redirect("/admin/kost/room-types");
 }
-
 
 module.exports = { list, showNew, create, showEdit, update, toggleActive };

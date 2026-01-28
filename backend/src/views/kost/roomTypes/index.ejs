@@ -3,9 +3,24 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h3 mb-0">Room Types</h1>
   <a class="btn btn-primary" href="/admin/kost/room-types/new"
-    >+ New Room Type</a
-  >
+    >+ New Room Type</a>
 </div>
+<%
+  const errs = Array.isArray(flash?.errors)
+    ? flash.errors.filter(e => String(e || "").trim() !== "")
+    : [];
+%>
+
+<% if (errs.length) { %>
+  <div class="alert alert-danger mb-3">
+    <ul class="mb-0">
+      <% errs.forEach(e => { %>
+        <li><%= e %></li>
+      <% }) %>
+    </ul>
+  </div>
+<% } %>
+
 
 <div class="card">
   <div class="table-responsive">
@@ -53,26 +68,32 @@
           <td><%= rt.has_ac ? "Yes" : "No" %></td>
           <td><%= rt.has_fan ? "Yes" : "No" %></td>
           <td><%= rt.is_capsule ? "Yes" : "No" %></td>
-          <td>
-            <a
-              class="btn btn-sm btn-outline-secondary"
-              href="/admin/kost/room-types/<%= rt.id %>/edit"
-              >Edit</a
-            >
-              <form
-              method="POST"
-              action="/admin/kost/room-types/<%= rt.id %>/toggle-active"
-              class="d-inline"
-            >
-              <button
-                type="submit"
-                class="btn btn-sm <%= rt.is_active ? "btn-outline-danger" : "btn-outline-success" %>"
-                onclick="return confirm('<%= rt.is_active ? "Deactivate" : "Activate" %> room type <%= rt.code %>?');"
-              >
-                <%= rt.is_active ? "Deactivate" : "Activate" %>
-              </button>
-            </form>
-          </td>
+         <td>
+  <div class="d-flex gap-2">
+    <a
+      class="btn btn-sm btn-outline-secondary"
+      href="/admin/kost/room-types/<%= rt.id %>/edit"
+    >
+      Edit
+    </a>
+
+    <form
+      method="POST"
+      action="/admin/kost/room-types/<%= rt.id %>/toggle-active"
+      data-code="<%= rt.code %>"
+      onsubmit="return confirm('<%= rt.is_active ? "Deactivate" : "Activate" %> room type ' + this.dataset.code + '?');"
+      class="m-0"
+    >
+      <button
+        type="submit"
+        class="btn btn-sm <%= rt.is_active ? "btn-outline-danger" : "btn-outline-success" %>"
+      >
+        <%= rt.is_active ? "Deactivate" : "Activate" %>
+      </button>
+    </form>
+  </div>
+</td>
+
         </tr>
         <% }) %>
       </tbody>

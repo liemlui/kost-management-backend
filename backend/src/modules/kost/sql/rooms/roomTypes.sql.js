@@ -112,4 +112,9 @@ module.exports = {
   WHERE id = $1
   RETURNING id, is_active;
 `,
+  countRoomsUsingRoomType: `
+  SELECT COUNT(*)::int AS cnt
+  FROM kost.rooms
+  WHERE room_type_id = $1;
+`,
 };

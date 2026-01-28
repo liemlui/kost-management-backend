@@ -151,6 +151,14 @@ async function deactivateRoomType(id) {
   });
   return result.rows[0] || null;
 }
+async function countRoomsUsingRoomType(roomTypeId) {
+  const result = await query(
+    sql.rooms.countRoomsUsingRoomType,
+    [roomTypeId],
+    { label: "kost.roomTypes.countRoomsUsingRoomType" },
+  );
+  return result.rows[0]?.cnt ?? 0;
+}
 
 module.exports = {
   listRoomTypes,
@@ -160,4 +168,5 @@ module.exports = {
   toggleRoomTypeActive,
   setRoomTypeActive,
   deactivateRoomType,
+  countRoomsUsingRoomType,
 };
