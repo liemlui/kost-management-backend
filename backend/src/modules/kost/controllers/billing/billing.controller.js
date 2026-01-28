@@ -5,11 +5,12 @@ const elecService = require("../../services/billing/electricity.service");
 const invoiceService = require("../../services/billing/invoice.services");
 const boardRepo = require("../../repos/billing/board.repo");
 const issueService = require("../../services/billing/issue.service");
+const { toIntOrNull, toNumOrNull } = require("../../../../shared/parsers");
 
 async function list(req, res, next) {
   try {
-    const past = Number(req.query.past ?? 2);
-    const future = Number(req.query.future ?? 10);
+    const past = toIntOrNull(req.query.past) ?? 2;
+    const future = toIntOrNull(req.query.future) ?? 10;
 
     const result = await boardRepo.listBillingBoard(past, future);
 
@@ -23,6 +24,7 @@ async function list(req, res, next) {
     next(e);
   }
 }
+
 async function issueStay(req, res, next) {
   try {
     const stayId = Number(req.params.stayId);
@@ -39,8 +41,6 @@ async function issueStay(req, res, next) {
   }
 }
 
-
-
 async function detail(req, res, next) {
   try {
     const invoiceId = Number(req.params.id);
@@ -56,26 +56,39 @@ async function detail(req, res, next) {
       items: items.rows,
       electricity: elec.rows[0] ?? null,
     });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 }
 
 async function generateDraft(req, res, next) {
   try {
     await genService.generateDraft();
     res.redirect("/admin/kost/billing");
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 }
 
 async function captureMeter(req, res, next) {
   try {
     const invoiceId = Number(req.params.id);
     const roomId = Number(req.body.room_id);
-    const startKwh = Number(req.body.start_kwh);
-    const endKwh = Number(req.body.end_kwh);
+    const startKwh = toNumOrNull(req.body.start_kwh);
+    const endKwh = toNumOrNull(req.body.end_kwh);
 
-    await elecService.captureMeter({ invoiceId, roomId, startKwh, endKwh, actorId: null });
+    await elecService.captureMeter({
+      invoiceId,
+      roomId,
+      startKwh,
+      endKwh,
+      actorId: null,
+    });
+
     res.redirect(`/admin/kost/billing/${invoiceId}`);
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 }
 
 async function issueInvoice(req, res, next) {
@@ -89,8 +102,11 @@ async function issueInvoice(req, res, next) {
   }
 }
 
-
-module.exports = { 
-    list, detail, generateDraft, captureMeter 
-, issueInvoice , issueStay
+module.exports = {
+  list,
+  detail,
+  generateDraft,
+  captureMeter,
+  issueInvoice,
+  issueStay,
 };

@@ -1,10 +1,6 @@
 // pwe/backend/src/modules/kost/controllers/assets/roomAssets.controller.js
 const repo = require("../../repos/assets/roomAssets.repo");
-
-function toNumber(v, fallback = null) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
+const { toIntOrNull, toNumOrNull, toNullIfEmpty } = require("../../../../shared/parsers");
 
 async function page(req, res, next) {
   try {
@@ -29,9 +25,9 @@ async function page(req, res, next) {
 async function assign(req, res, next) {
   try {
     const roomId = Number(req.params.id);
-    const inventoryItemId = toNumber(req.body.inventory_item_id);
-    const qty = toNumber(req.body.qty, 1) ?? 1;
-    const note = (req.body.note || "").trim() || null;
+    const inventoryItemId = toIntOrNull(req.body.inventory_item_id);
+    const qty = toNumOrNull(req.body.qty) ?? 1;
+    const note = toNullIfEmpty(req.body.note);
 
     if (!inventoryItemId) {
       const e = new Error("Item wajib dipilih");
@@ -96,7 +92,7 @@ async function remove(req, res, next) {
   try {
     const roomId = Number(req.params.id);
     const assetId = Number(req.params.assetId);
-    const reason = (req.body.remove_reason || "").trim() || "removed by admin";
+    const reason = toNullIfEmpty(req.body.remove_reason) || "removed by admin";
 
     const actorUserId = null;
 
