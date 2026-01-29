@@ -3,6 +3,7 @@
 const roomRepo = require("../../repos/rooms/room.repo");
 const roomAmenityRepo = require("../../repos/rooms/roomAmenity.repo");
 const roomTypesRepo = require("../../repos/rooms/roomTypes.repo");
+const { toIntOrNull, toNullIfEmpty, toSelectIntOrNull } = require("../../../../shared/parsers");
 
 const FLOOR_OPTIONS = [1, 2];
 const ZONE_OPTIONS = ["", "FRONT", "MIDDLE", "BACK"]; // "" => null
@@ -10,16 +11,14 @@ const STATUS_OPTIONS = ["AVAILABLE", "MAINTENANCE", "INACTIVE"];
 
 function normalizeRoomPayload(body) {
   const code = (body.code || "").trim();
-  const room_type_id = body.room_type_id ? Number(body.room_type_id) : null;
-  const floor = body.floor ? Number(body.floor) : null;
 
-  const position_zone =
-    body.position_zone && body.position_zone.trim() !== ""
-      ? body.position_zone.trim()
-      : null;
+  // parsing only (behavior-preserving)
+  const room_type_id = toSelectIntOrNull(body.room_type_id);
+  const floor = toIntOrNull(body.floor);
+  const position_zone = toNullIfEmpty(body.position_zone);
 
   const status = (body.status || "AVAILABLE").trim();
-  const notes = body.notes && body.notes.trim() !== "" ? body.notes.trim() : null;
+  const notes = toNullIfEmpty(body.notes);
 
   return { code, room_type_id, floor, position_zone, status, notes };
 }
@@ -37,16 +36,10 @@ function validateRoomPayload(p) {
   if (!STATUS_OPTIONS.includes(p.status)) errors.push("Status tidak valid.");
   return errors;
 }
-function parseIntOrNull(v) {
-  if (v === null || v === undefined) return null;
-  const s = String(v).trim();
-  if (s === "") return null;
-  const n = Number.parseInt(s, 10);
-  return Number.isFinite(n) ? n : null;
-}
+
 async function index(req, res, next) {
   try {
-    const roomTypeId = parseIntOrNull(req.query.room_type_id);
+    const roomTypeId = toIntOrNull(req.query.room_type_id);
 
     const [rooms, roomTypes] = await Promise.all([
       roomRepo.listRooms(roomTypeId),
@@ -65,7 +58,6 @@ async function index(req, res, next) {
     next(err);
   }
 }
-
 
 async function showNewForm(req, res, next) {
   try {
@@ -114,7 +106,6 @@ async function create(req, res, next) {
     const newId = inserted?.id;
 
     if (!newId) {
-      // safety net if SQL missing RETURNING
       const e = new Error("Insert room succeeded but no id returned. Check SQL RETURNING.");
       e.status = 500;
       throw e;
@@ -148,15 +139,15 @@ async function detail(req, res, next) {
     const room = await roomRepo.getRoomById(id); // ✅ object | null
     if (!room) return res.status(404).send("Room not found");
 
-    const roomAmenities = await roomAmenityRepo.listRoomAmenities(id); // ✅ ADD
-    const roomTypes = await roomTypesRepo.listRoomTypes(); // rows[]
+    const roomAmenities = await roomAmenityRepo.listRoomAmenities(id);
+    const roomTypes = await roomTypesRepo.listRoomTypes();
 
     res.render("kost/rooms/detail", {
       title: `Room ${room.code}`,
       room,
       roomAmenities,
-        roomTypes,
-        query: req.query,
+      roomTypes,
+      query: req.query,
     });
   } catch (err) {
     next(err);
@@ -219,8 +210,6 @@ async function update(req, res, next) {
       });
     }
 
-    // repo kamu sekarang: updateRoom(payload) yang expects payload.id
-    // ✅ kita pakai format yang kamu punya sekarang
     await roomRepo.updateRoom({ id, ...payload });
 
     return res.redirect(`/admin/kost/rooms/${id}`);
@@ -282,7 +271,7 @@ async function unblock(req, res, next) {
 async function changeRoomType(req, res, next) {
   try {
     const roomId = Number(req.params.id);
-    const roomTypeId = Number(req.body.room_type_id);
+    const roomTypeId = toSelectIntOrNull(req.body.room_type_id);
 
     if (!roomTypeId) return res.status(400).send("room_type_id is required");
 
@@ -304,5 +293,5 @@ module.exports = {
   remove,
   block,
   unblock,
-    changeRoomType,
+  changeRoomType,
 };

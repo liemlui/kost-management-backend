@@ -1,25 +1,26 @@
 const inventoryRepo = require("../../repos/inventory/inventoryItems.repo");
+const { toNumOrNull, toBool, toNullIfEmpty } = require("../../../../shared/parsers");
 
 const ITEM_TYPES = ["CONSUMABLE", "SPARE_PART", "FIXED_ASSET"];
 
 function normalizePayload(body) {
   return {
-    sku: body.sku?.trim() || null,
-    name: body.name?.trim(),
-    category: body.category?.trim() || null,
+    sku: toNullIfEmpty(body.sku),
+    name: body.name?.trim(), // keep behavior: can be undefined if not provided
+    category: toNullIfEmpty(body.category),
     item_type: body.item_type,
-    uom: body.uom?.trim() || "PCS",
-    reorder_point: body.reorder_point !== "" ? Number(body.reorder_point) : null,
-    reorder_qty: body.reorder_qty !== "" ? Number(body.reorder_qty) : null,
-    is_active: body.is_active !== "false",
+    uom: (toNullIfEmpty(body.uom) || "PCS").trim(),
+    reorder_point: toNumOrNull(body.reorder_point),
+    reorder_qty: toNumOrNull(body.reorder_qty),
+    // preserve behavior: default true if field absent
+    is_active: body.is_active === undefined ? true : toBool(body.is_active),
   };
 }
 
 function validatePayload(p) {
   const errors = [];
   if (!p.name) errors.push("Nama item wajib diisi.");
-  if (!ITEM_TYPES.includes(p.item_type))
-    errors.push("Item type tidak valid.");
+  if (!ITEM_TYPES.includes(p.item_type)) errors.push("Item type tidak valid.");
   if (p.reorder_point !== null && p.reorder_point < 0)
     errors.push("Reorder point tidak boleh negatif.");
   if (p.reorder_qty !== null && p.reorder_qty <= 0)

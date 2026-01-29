@@ -1,19 +1,9 @@
+// backend/src/modules/kost/controllers/inventory/inventoryMovements.controller.js
 const repo = require("../../repos/inventory/inventoryMovements.repo");
+const { toIntOrNull, toNumOrNull, toNullIfEmpty } = require("../../../../shared/parsers");
 
 const MOVEMENT_TYPES = ["PURCHASE", "USE", "TRANSFER", "ADJUST", "DISPOSAL", "REPAIR"];
 const ADJUST_DIRECTIONS = ["IN", "OUT"];
-
-function toIntOrNull(v) {
-  if (v === undefined || v === null || String(v).trim() === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
-function toNumOrNull(v) {
-  if (v === undefined || v === null || String(v).trim() === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
 
 function normalize(body) {
   return {
@@ -23,9 +13,9 @@ function normalize(body) {
     unit_cost: toNumOrNull(body.unit_cost),
     from_location_id: toIntOrNull(body.from_location_id),
     to_location_id: toIntOrNull(body.to_location_id),
-    adjust_direction: (body.adjust_direction || "").trim(), // IN/OUT (untuk ADJUST)
-    condition_after: body.condition_after?.trim() || null,
-    notes: body.notes?.trim() || null,
+    adjust_direction: (body.adjust_direction || "").trim(),
+    condition_after: toNullIfEmpty(body.condition_after),
+    notes: toNullIfEmpty(body.notes),
     source: "MANUAL",
     finance_txn_id: null,
   };
@@ -38,7 +28,6 @@ function validate(p) {
   if (!MOVEMENT_TYPES.includes(p.movement_type)) errors.push("Movement type tidak valid.");
   if (!p.qty || p.qty <= 0) errors.push("Qty harus > 0.");
 
-  // Rules per type
   if (p.movement_type === "PURCHASE") {
     if (!p.to_location_id) errors.push("To location wajib diisi untuk PURCHASE.");
     if (p.unit_cost === null || p.unit_cost <= 0) errors.push("Unit cost wajib (>0) untuk PURCHASE.");
@@ -63,7 +52,6 @@ function validate(p) {
   }
 
   if (p.movement_type === "REPAIR") {
-    // v1: treat as TRANSFER to repair location (lebih rapi daripada log tanpa lokasi)
     if (!p.from_location_id) errors.push("From location wajib untuk REPAIR.");
     if (!p.to_location_id) errors.push("To location (repair) wajib untuk REPAIR.");
   }
@@ -72,7 +60,6 @@ function validate(p) {
 }
 
 function flagsForBalance(p) {
-  // menentukan apakah perlu OUT/IN ke balances
   if (p.movement_type === "PURCHASE") return { _in: true, _out: false };
   if (p.movement_type === "USE") return { _in: false, _out: true };
   if (p.movement_type === "DISPOSAL") return { _in: false, _out: true };
@@ -87,8 +74,8 @@ function flagsForBalance(p) {
 async function index(req, res, next) {
   try {
     const filter = {
-      item_id: req.query.item_id || null,
-      movement_type: req.query.movement_type || null,
+      item_id: toIntOrNull(req.query.item_id),
+      movement_type: toNullIfEmpty(req.query.movement_type),
     };
 
     const [items, movements] = await Promise.all([
@@ -162,11 +149,9 @@ async function create(req, res, next) {
     }
 
     const { _in, _out } = flagsForBalance(p);
-
     const txPayload = { ...p, _in, _out };
 
     await repo.createMovementTx(txPayload);
-
     return res.redirect("/admin/kost/inventory/movements");
   } catch (err) {
     if (err && err.status === 400) {
@@ -193,7 +178,6 @@ async function create(req, res, next) {
     return next(err);
   }
 }
-
 
 module.exports = {
   index,

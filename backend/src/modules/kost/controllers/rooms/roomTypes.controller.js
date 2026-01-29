@@ -1,14 +1,6 @@
 // modules/kost/controllers/rooms/roomTypes.controller.js
 const repo = require("../../repos/rooms/roomTypes.repo");
-const { toIntOrNull, toBool } = require("../../../../shared/parsers");
-
-function parseNum(v) {
-  if (v === null || v === undefined) return null;
-  const s = String(v).trim();
-  if (s === "" || s.toLowerCase() === "false") return null; // <- penting (placeholder select)
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
-}
+const { toIntOrNull, toBool, toNumOrNull } = require("../../../../shared/parsers");
 
 function normalizeBathroom(form, errors) {
   // DB: bathroom_location NOT NULL, allowed INSIDE|OUTSIDE
@@ -25,8 +17,9 @@ function normalizeBathroom(form, errors) {
   }
 
   // INSIDE => required both
-  const bw = parseNum(form.bathroom_width_m);
-  const bl = parseNum(form.bathroom_length_m);
+  // toNumOrNull already returns null for "" or NaN (including "false")
+  const bw = toNumOrNull(form.bathroom_width_m);
+  const bl = toNumOrNull(form.bathroom_length_m);
 
   if (bw === null || bl === null) {
     errors.push(
@@ -168,11 +161,11 @@ async function create(req, res) {
   const payload = {
     code: form.code,
     name: form.name,
-    base_monthly_price: parseNum(form.base_monthly_price) ?? 0,
-    deposit_amount: parseNum(form.deposit_amount) ?? 0,
+    base_monthly_price: toNumOrNull(form.base_monthly_price) ?? 0,
+    deposit_amount: toNumOrNull(form.deposit_amount) ?? 0,
     is_capsule: toBool(form.is_capsule),
-    room_width_m: parseNum(form.room_width_m) ?? null,
-    room_length_m: parseNum(form.room_length_m) ?? null,
+    room_width_m: toNumOrNull(form.room_width_m),
+    room_length_m: toNumOrNull(form.room_length_m),
     bathroom_location: bath.bathroom_location,
     bathroom_width_m: bath.bathroom_width_m,
     bathroom_length_m: bath.bathroom_length_m,
@@ -305,11 +298,11 @@ async function update(req, res) {
   const payload = {
     code: form.code,
     name: form.name,
-    base_monthly_price: parseNum(form.base_monthly_price) ?? 0,
-    deposit_amount: parseNum(form.deposit_amount) ?? 0,
+    base_monthly_price: toNumOrNull(form.base_monthly_price) ?? 0,
+    deposit_amount: toNumOrNull(form.deposit_amount) ?? 0,
     is_capsule: toBool(form.is_capsule),
-    room_width_m: parseNum(form.room_width_m) ?? null,
-    room_length_m: parseNum(form.room_length_m) ?? null,
+    room_width_m: toNumOrNull(form.room_width_m),
+    room_length_m: toNumOrNull(form.room_length_m),
     bathroom_location: bath.bathroom_location,
     bathroom_width_m: bath.bathroom_width_m,
     bathroom_length_m: bath.bathroom_length_m,

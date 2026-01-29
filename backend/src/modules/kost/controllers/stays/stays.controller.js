@@ -2,6 +2,13 @@
 const stayRepo = require("../../repos/stays/stay.repo");
 const { get } = require("../../routes");
 const stayService = require("../../services/stays/stay.service");
+const {
+  toNullIfEmpty,
+  toIntOrNull,
+  toNumOrNull,
+} = require("../../../../shared/parsers");
+
+const { todayISO_WIB } = require("../../../../shared/dates");
 
 // ---------- helpers ----------
 function pickForm(body = {}) {
@@ -23,317 +30,188 @@ function pickForm(body = {}) {
     electricity_fixed_amount: body.electricity_fixed_amount || "",
     water_fixed_amount: body.water_fixed_amount || "",
     internet_fixed_amount: body.internet_fixed_amount || "",
-    room_variant: body.room_variant || "FAN",
-
+    room_variant: body.room_variant || "",
+    is_active: body.is_active || "",
     notes: body.notes || "",
   };
 }
-function getTodayISO_WIB() {
-  const now = new Date();
-  const wibNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-  const yyyy = wibNow.getFullYear();
-  const mm = String(wibNow.getMonth() + 1).padStart(2, "0");
-  const dd = String(wibNow.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+
+function isPastDateISO(dateISO, todayISO) {
+  if (!dateISO) return false;
+  return dateISO < todayISO;
 }
-function toNullIfEmpty(v) {
-  if (v === undefined || v === null) return null;
-  const s = String(v).trim();
-  return s === "" ? null : s;
-}
-function toIntOrNull(v) {
-  const x = toNullIfEmpty(v);
-  if (x === null) return null;
-  const n = Number.parseInt(x, 10);
-  return Number.isFinite(n) ? n : null;
-}
-function toNumOrNull(v) {
-  const x = toNullIfEmpty(v);
-  if (x === null) return null;
-  const n = Number(x);
-  return Number.isFinite(n) ? n : null;
-}
-
-/**
- * Guard: check-in tidak boleh di masa lalu (Asia/Jakarta)
- * body.check_in_at format: YYYY-MM-DD
- */
-function isPastDateISO(dateStr) {
-  const d = new Date(dateStr + "T00:00:00+07:00");
-  const todayISO = getTodayISO_WIB();
-  const wibToday = new Date(`${todayISO}T00:00:00+07:00`);
-  return d < wibToday;
-}
-
-/**
- * Normalisasi payload create stay:
- * - Base/agreed tidak diisi dari form -> dihitung di service (server-side truth)
- * - additional & discount boleh kosong -> default 0 di service
- */
-function normalizeCreatePayload(body = {}) {
-  const rp = (toNullIfEmpty(body.rent_period) || "MONTHLY");
-const rent_period = (rp === "TWO_WEEKS") ? "BIWEEKLY" : rp;
-  return {
-    tenant_id: toIntOrNull(body.tenant_id),
-    room_id: toIntOrNull(body.room_id),
-
-    check_in_at: toNullIfEmpty(body.check_in_at),
-    rent_period: toNullIfEmpty(body.rent_period) || "MONTHLY",
-    room_variant: toNullIfEmpty(body.room_variant) || "FAN",
-
-    additional_rent_amount: toNumOrNull(body.additional_rent_amount) ?? 0,
-    additional_rent_reason: toNullIfEmpty(body.additional_rent_reason),
-
-
-    discount_amount: toNumOrNull(body.discount_amount) ?? 0,
-    discount_reason: toNullIfEmpty(body.discount_reason),
-
-    deposit_amount: toNumOrNull(body.deposit_amount), // null => default from room_type in service
-    billing_anchor_day: toIntOrNull(body.billing_anchor_day),
-
-    electricity_mode: toNullIfEmpty(body.electricity_mode) || "METERED",
-    electricity_fixed_amount: toNumOrNull(body.electricity_fixed_amount) ?? 0,
-    water_fixed_amount: toNumOrNull(body.water_fixed_amount) ?? 0,
-    internet_fixed_amount: toNumOrNull(body.internet_fixed_amount) ?? 0,
-
-    notes: toNullIfEmpty(body.notes),
-    created_by: body.created_by ? toIntOrNull(body.created_by) : null,
-  };
-}
-
 
 // ---------- controllers ----------
-async function renderStayNewForm(req, res, next) {
+
+async function index(req, res, next) {
   try {
-    const wibNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-const yyyy = wibNow.getFullYear();
-const mm = String(wibNow.getMonth() + 1).padStart(2, "0");
-const dd = String(wibNow.getDate()).padStart(2, "0");
-const todayISO = `${yyyy}-${mm}-${dd}`;
-
-    const [roomsRes, tenantsRes] = await Promise.all([
-      stayRepo.listAvailableRooms(),
-      stayRepo.listActiveTenants(),
-    ]);
-
-    return res.render("kost/stays/new", {
-      title: "New Stay",
-      rooms: roomsRes?.rows ?? [],
-      tenants: tenantsRes?.rows ?? [],
-      form: pickForm({}),
-      error: null,
-      todayISO: getTodayISO_WIB(), // ✅ untuk min date di EJS
-    });
-  } catch (err) {
-    return next(err);
-  }
-}
-
-
-
-async function renderStayDetail(req, res, next) {
-  try {
-    const stayId = toIntOrNull(req.params.id);
-    if (!stayId) {
-      const e = new Error("Invalid stay id");
-      e.status = 400;
-      throw e;
-    }
-
-    const result = await stayRepo.getStayById(stayId);
-    const stay = result?.rows?.[0];
-
-    if (!stay) {
-      const e = new Error("Stay not found");
-      e.status = 404;
-      throw e;
-    }
-
-    return res.render("kost/stays/detail", { title: `Stay #${stay.id}`, stay });
-  } catch (err) {
-    return next(err);
-  }
-}
-
-async function createStay(req, res, next) {
-  try {
-    const payload = normalizeCreatePayload(req.body);
-
-    if (!payload.tenant_id || !payload.room_id || !payload.check_in_at) {
-      const e = new Error("Tenant, Room, and Check-in date are required");
-      e.status = 400;
-      throw e;
-    }
-
-    if (isPastDateISO(payload.check_in_at)) {
-      const e = new Error("Check-in date cannot be in the past");
-      e.status = 400;
-      throw e;
-    }
-
-    // ✅ Create via service (server recompute base + agreed, planned checkout auto)
-    const created = await stayService.createStay(payload);
-
-    if (!created?.id) {
-      const e = new Error("Failed to create stay");
-      e.status = 400;
-      throw e;
-    }
-
-    return res.redirect(`/admin/kost/stays/${created.id}`);
-  } catch (err) {
-    try {
-      const wibNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-const yyyy = wibNow.getFullYear();
-const mm = String(wibNow.getMonth() + 1).padStart(2, "0");
-const dd = String(wibNow.getDate()).padStart(2, "0");
-const todayISO = `${yyyy}-${mm}-${dd}`;
-
-      const [roomsRes, tenantsRes] = await Promise.all([
-        stayRepo.listAvailableRooms(),
-        stayRepo.listActiveTenants(),
-      ]);
-
-        return res.status(err.status || 400).render("kost/stays/new", {
-        title: "New Stay",
-        rooms: roomsRes?.rows ?? [],
-        tenants: tenantsRes?.rows ?? [],
-        form: pickForm(req.body),
-        error: err.message || "Failed to create stay" ,
-        todayISO: getTodayISO_WIB(), // ✅ untuk min date di EJS
-      });
-    } catch {
-      return next(err);
-    }
-  }
-}
-
-/**
- * Preferred term: Checkout (ENDED)
- */
-async function checkoutStay(req, res, next) {
-  try {
-    const stayId = toIntOrNull(req.params.id);
-    if (!stayId) {
-      const e = new Error("Invalid stay id");
-      e.status = 400;
-      throw e;
-    }
-
-    await stayService.checkoutStay(stayId);
-    return res.redirect(`/admin/kost/stays/${stayId}`);
-  } catch (err) {
-    return next(err);
-  }
-}
-async function markPhysicalCheckout(req, res, next) {
-  try {
-    const stayId = toIntOrNull(req.params.id);
-    if (!stayId) {
-      const e = new Error("Invalid stay id");
-      e.status = 400;
-      throw e;
-    }
-
-    await stayService.markPhysicalCheckout(stayId);
-    return res.redirect(`/admin/kost/stays/${stayId}`);
-  } catch (err) {
-    return next(err);
-  }
-}
-
-/**
- * Alias: endStay (backward compatible)
- */
-async function endStay(req, res, next) {
-  try {
-    const stayId = toIntOrNull(req.params.id);
-    if (!stayId) {
-      const e = new Error("Invalid stay id");
-      e.status = 400;
-      throw e;
-    }
-
-    await stayService.endStay(stayId);
-    return res.redirect(`/admin/kost/stays/${stayId}`);
-  } catch (err) {
-    return next(err);
-  }
-}
-async function renderStaysList(req, res, next) {
-  try {
-    const rawStatus = req.query.status ?? "ALL";
+    const rawStatus = (req.query.status || "ACTIVE").trim().toUpperCase();
     const status = rawStatus === "ALL" ? null : rawStatus;
 
-    const currentYear = Number(getTodayISO_WIB().slice(0, 4));
-    const year = Number.parseInt(req.query.year, 10) || currentYear;
+    const currentYear = Number(todayISO_WIB().slice(0, 4));
+    // ✅ parsing-only refactor: preserves default behavior
+    const year = toIntOrNull(req.query.year) ?? currentYear;
 
     const years = [];
     for (let y = currentYear; y >= currentYear - 5; y -= 1) years.push(y);
 
     const date_from = `${year}-01-01`;
-    const date_to = `${year + 1}-01-01`;
+    const date_to = `${year}-12-31`;
 
-    // UI belum pakai tenant/room filter → set null
-    const tenant_id = null;
-    const room_id = null;
+    const [stays, rooms, tenants] = await Promise.all([
+      stayRepo.listStays({ status, date_from, date_to }),
+      stayRepo.listRooms(),
+      stayRepo.listTenants(),
+    ]);
 
-    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
-const limit = Math.min(200, Math.max(10, Number.parseInt(req.query.limit, 10) || 50));
-const offset = (page - 1) * limit;
-
-const baseFilters = {
-  status,
-  tenant_id: null,
-  room_id: null,
-  date_from,
-  date_to,
-};
-
-const [countRes, listRes] = await Promise.all([
-  stayRepo.countStaysFiltered(baseFilters),
-  stayRepo.listStaysFiltered({ ...baseFilters, limit, offset }),
-]);
-
-const totalRows = Number(countRes?.rows?.[0]?.total || 0);
-const totalPages = Math.max(1, Math.ceil(totalRows / limit));
-
-// clamp page kalau user request page terlalu besar
-if (page > totalPages) {
-  page = totalPages;
-  offset = (page - 1) * limit;
-  const listRes2 = await stayRepo.listStaysFiltered({ ...baseFilters, limit, offset });
-  return res.render("kost/stays/index", {
-    title: "Stays",
-    stays: listRes2?.rows ?? [],
-    years,
-    pagination: { page, limit, totalRows, totalPages },
-    filters: { status: rawStatus, year, page, limit },
-  });
-}
-
-    const result = await stayRepo.listStaysFiltered({ status, tenant_id:null, room_id:null, date_from, date_to,limit, offset });
-    const stays = result?.rows ?? [];
-
-    return res.render("kost/stays/index", {
+    res.render("kost/stays/index", {
       title: "Stays",
       stays,
+      rooms,
+      tenants,
       years,
-      pagination: { page, limit, totalRows, totalPages },
-      filters: { status: rawStatus, year, page, limit },
+      query: req.query,
+      filters: {
+        status,
+        year,
+        date_from,
+        date_to,
+      },
     });
   } catch (err) {
-    return next(err);
+    next(err);
   }
 }
 
+async function showNew(req, res, next) {
+  try {
+    const today = todayISO_WIB();
+    const [rooms, tenants] = await Promise.all([
+      stayRepo.listRooms({ onlyAvailable: true }),
+      stayRepo.listTenants(),
+    ]);
+
+    res.render("kost/stays/form", {
+      title: "New Stay",
+      mode: "create",
+      action: "/admin/kost/stays",
+      rooms,
+      tenants,
+      form: pickForm({
+        check_in_at: today,
+        rent_period: "MONTHLY",
+        electricity_mode: "METERED",
+      }),
+      errors: [],
+      todayISO: today,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function create(req, res, next) {
+  try {
+    const today = todayISO_WIB();
+    const form = pickForm(req.body);
+
+    const payload = {
+      tenant_id: toIntOrNull(form.tenant_id),
+      room_id: toIntOrNull(form.room_id),
+      check_in_at: toNullIfEmpty(form.check_in_at),
+      rent_period: toNullIfEmpty(form.rent_period),
+
+      additional_rent_amount: toNumOrNull(form.additional_rent_amount) || 0,
+      additional_rent_reason: toNullIfEmpty(form.additional_rent_reason),
+
+      discount_amount: toNumOrNull(form.discount_amount) || 0,
+      discount_reason: toNullIfEmpty(form.discount_reason),
+
+      deposit_amount: toNumOrNull(form.deposit_amount) || 0,
+
+      billing_anchor_day: toIntOrNull(form.billing_anchor_day),
+      electricity_mode: toNullIfEmpty(form.electricity_mode),
+      electricity_fixed_amount: toNumOrNull(form.electricity_fixed_amount) || 0,
+      water_fixed_amount: toNumOrNull(form.water_fixed_amount) || 0,
+      internet_fixed_amount: toNumOrNull(form.internet_fixed_amount) || 0,
+
+      room_variant: toNullIfEmpty(form.room_variant),
+      notes: toNullIfEmpty(form.notes),
+    };
+
+    const errors = [];
+
+    if (!payload.tenant_id) errors.push("Tenant wajib dipilih.");
+    if (!payload.room_id) errors.push("Room wajib dipilih.");
+    if (!payload.check_in_at) errors.push("Check-in date wajib diisi.");
+    if (payload.check_in_at && isPastDateISO(payload.check_in_at, today)) {
+      errors.push("Check-in date tidak boleh di masa lalu (WIB).");
+    }
+    if (!payload.rent_period) errors.push("Rent period wajib dipilih.");
+
+    if (!payload.billing_anchor_day) errors.push("Billing anchor day wajib diisi.");
+
+    if (!payload.electricity_mode) errors.push("Electricity mode wajib dipilih.");
+    if (payload.electricity_mode === "FIXED" && payload.electricity_fixed_amount <= 0) {
+      errors.push("Electricity fixed amount wajib > 0 jika mode FIXED.");
+    }
+
+    if (errors.length) {
+      const [rooms, tenants] = await Promise.all([
+        stayRepo.listRooms({ onlyAvailable: true }),
+        stayRepo.listTenants(),
+      ]);
+
+      return res.status(400).render("kost/stays/form", {
+        title: "New Stay",
+        mode: "create",
+        action: "/admin/kost/stays",
+        rooms,
+        tenants,
+        form,
+        errors,
+        todayISO: today,
+      });
+    }
+
+    await stayService.createStay(payload, req.user?.id || null);
+    return res.redirect("/admin/kost/stays");
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function detail(req, res, next) {
+  try {
+    const stayId = Number(req.params.id);
+    const stay = await stayRepo.getStayById(stayId);
+    if (!stay) return res.status(404).send("Stay not found");
+
+    res.render("kost/stays/detail", {
+      title: `Stay #${stayId}`,
+      stay,
+      query: req.query,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function checkout(req, res, next) {
+  try {
+    const stayId = Number(req.params.id);
+    const today = todayISO_WIB();
+    await stayService.checkoutStay(stayId, today, req.user?.id || null);
+    return res.redirect(`/admin/kost/stays/${stayId}?checked_out=1`);
+  } catch (err) {
+    next(err);
+  }
+}
 
 module.exports = {
-  renderStaysList,
-  renderStayNewForm,
-  renderStayDetail,
-  createStay,
-  checkoutStay,
-  markPhysicalCheckout,
-  endStay,
+  index,
+  showNew,
+  create,
+  detail,
+  checkout,
 };

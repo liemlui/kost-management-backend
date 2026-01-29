@@ -2,6 +2,7 @@
 
 const roomRepo = require("../../repos/rooms/room.repo");
 const roomAmenityRepo = require("../../repos/rooms/roomAmenity.repo");
+const { toIntOrNull, toNullIfEmpty } = require("../../../../shared/parsers");
 
 // helper kecil: validasi qty
 function toQty(v) {
@@ -17,7 +18,7 @@ async function manageRoomAmenities(req, res, next) {
   try {
     const roomId = Number(req.params.id);
     const room = await roomRepo.getRoomById(roomId);
-if (!Number.isInteger(roomId) || roomId <= 0) return res.status(400).send("Invalid room id");
+    if (!Number.isInteger(roomId) || roomId <= 0) return res.status(400).send("Invalid room id");
 
     const roomAmenities = await roomAmenityRepo.listRoomAmenities(roomId);
     const picklist = await roomAmenityRepo.listActiveAmenitiesNotInRoom(roomId);
@@ -41,7 +42,7 @@ async function addRoomAmenity(req, res, next) {
     const room = await roomRepo.getRoomById(roomId);
     if (!room) return res.status(404).send("Room not found");
 
-    const amenity_id = Number(req.body.amenity_id);
+    const amenity_id = toIntOrNull(req.body.amenity_id);
     const qty = toQty(req.body.qty);
     const conditionRaw = (req.body.condition || "").trim();
     const condition = conditionRaw ? conditionRaw.toUpperCase() : null;
@@ -59,12 +60,11 @@ async function addRoomAmenity(req, res, next) {
       amenity_id,
       qty,
       condition,
-      notes: (req.body.notes || "").trim() || null,
+      notes: toNullIfEmpty(req.body.notes),
     });
 
     return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
   } catch (err) {
-
     next(err);
   }
 }
@@ -72,7 +72,7 @@ async function addRoomAmenity(req, res, next) {
 async function updateRoomAmenity(req, res, next) {
   try {
     const roomId = Number(req.params.id);
-    const roomAmenityId = Number(req.params.roomAmenityId);
+    const roomAmenityId = toIntOrNull(req.params.roomAmenityId);
 
     const qty = toQty(req.body.qty);
     const conditionRaw = (req.body.condition || "").trim();
@@ -85,7 +85,7 @@ async function updateRoomAmenity(req, res, next) {
     const updated = await roomAmenityRepo.updateRoomAmenity(roomId, roomAmenityId, {
       qty,
       condition,
-      notes: (req.body.notes || "").trim() || null,
+      notes: toNullIfEmpty(req.body.notes),
     });
 
     // kalau tidak ketemu / bukan milik room itu
@@ -100,7 +100,7 @@ async function updateRoomAmenity(req, res, next) {
 async function deleteRoomAmenity(req, res, next) {
   try {
     const roomId = Number(req.params.id);
-    const roomAmenityId = Number(req.params.roomAmenityId);
+    const roomAmenityId = toIntOrNull(req.params.roomAmenityId);
 
     const deleted = await roomAmenityRepo.deleteRoomAmenity(roomId, roomAmenityId);
     if (!deleted) return res.status(404).send("Room amenity not found");

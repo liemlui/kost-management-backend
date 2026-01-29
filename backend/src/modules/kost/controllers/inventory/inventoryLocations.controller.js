@@ -1,30 +1,15 @@
 const locationsRepo = require("../../repos/inventory/inventoryLocations.repo");
 const roomLookupRepo = require("../../repos/rooms/roomLookup.repo");
+const { toSelectIntOrNull, toBool, toNullIfEmpty } = require("../../../../shared/parsers");
 
 // v1 whitelist
 const LOCATION_TYPES = ["GENERAL", "ROOM"];
 
-function parseRoomId(v) {
-  if (v === null || v === undefined) return null;
-  const s = String(v).trim();
-  if (s === "" || s.toLowerCase() === "false") return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
-}
-
-function toBool(v) {
-  if (v === true) return true;
-  if (v === false) return false;
-  if (v === null || v === undefined) return false;
-  const s = String(v).trim().toLowerCase();
-  return s === "1" || s === "true" || s === "on" || s === "yes";
-}
-
 function normalizePayload(body) {
   return {
-    name: body.name?.trim(),
+    name: toNullIfEmpty(body.name),
     location_type: (body.location_type || "").trim().toUpperCase(),
-    room_id: parseRoomId(body.room_id),
+    room_id: toSelectIntOrNull(body.room_id),
     is_active: toBool(body.is_active),
   };
 }
@@ -79,16 +64,16 @@ async function showNewForm(req, res, next) {
   }
 }
 
-
 async function create(req, res, next) {
   try {
     const rooms = await roomLookupRepo.listRoomsForDropdown();
-    const roomMap = new Map((rooms || []).map(r => [Number(r.id), r.code || null]));
+    const roomMap = new Map((rooms || []).map((r) => [Number(r.id), r.code || null]));
 
     const payload = normalizePayload(req.body);
+
     if (payload.location_type === "ROOM") {
-    const code = roomMap.get(Number(payload.room_id));
-    if (code) payload.name = code;
+      const code = roomMap.get(Number(payload.room_id));
+      if (code) payload.name = code;
     }
 
     const errors = validatePayload(payload);
@@ -110,7 +95,6 @@ async function create(req, res, next) {
   }
 }
 
-
 async function showEditForm(req, res, next) {
   try {
     const rooms = await roomLookupRepo.listRoomsForDropdown();
@@ -129,16 +113,16 @@ async function showEditForm(req, res, next) {
   }
 }
 
-
 async function update(req, res, next) {
   try {
     const rooms = await roomLookupRepo.listRoomsForDropdown();
-    const roomMap = new Map((rooms || []).map(r => [Number(r.id), r.code || null]));
+    const roomMap = new Map((rooms || []).map((r) => [Number(r.id), r.code || null]));
 
     const payload = normalizePayload(req.body);
+
     if (payload.location_type === "ROOM") {
-    const code = roomMap.get(Number(payload.room_id));
-    if (code) payload.name = code;
+      const code = roomMap.get(Number(payload.room_id));
+      if (code) payload.name = code;
     }
 
     const errors = validatePayload(payload);
@@ -160,7 +144,6 @@ async function update(req, res, next) {
   }
 }
 
-
 async function remove(req, res, next) {
   try {
     await locationsRepo.softDelete(req.params.id);
@@ -169,7 +152,6 @@ async function remove(req, res, next) {
     next(err);
   }
 }
-
 
 module.exports = {
   index,
