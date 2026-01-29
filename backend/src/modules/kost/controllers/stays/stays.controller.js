@@ -1,6 +1,5 @@
-// modules/kost/controllers/stays/stays.controller.js
+// backend/src/modules/kost/controllers/stays/stays.controller.js
 const stayRepo = require("../../repos/stays/stay.repo");
-const { get } = require("../../routes");
 const stayService = require("../../services/stays/stay.service");
 const {
   toNullIfEmpty,
@@ -41,28 +40,51 @@ function isPastDateISO(dateISO, todayISO) {
   return dateISO < todayISO;
 }
 
-// ---------- controllers ----------
+function clampInt(n, min, max, fallback) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return fallback;
+  const i = Math.trunc(x);
+  if (i < min) return min;
+  if (i > max) return max;
+  return i;
+}
 
+// ---------- controllers ----------
 async function index(req, res, next) {
   try {
+    // UI status (biar dropdown selected bener)
     const rawStatus = (req.query.status || "ACTIVE").trim().toUpperCase();
+    // Repo status (null = ALL)
     const status = rawStatus === "ALL" ? null : rawStatus;
 
     const currentYear = Number(todayISO_WIB().slice(0, 4));
-    // ✅ parsing-only refactor: preserves default behavior
     const year = toIntOrNull(req.query.year) ?? currentYear;
 
     const years = [];
     for (let y = currentYear; y >= currentYear - 5; y -= 1) years.push(y);
 
-    const date_from = `${year}-01-01`;
-    const date_to = `${year}-12-31`;
+    // pagination from query
+    const page = clampInt(req.query.page ?? 1, 1, 10_000, 1);
+    const limit = clampInt(req.query.limit ?? 50, 1, 500, 50);
+    const offset = (page - 1) * limit;
 
-    const [stays, rooms, tenants] = await Promise.all([
-      stayRepo.listStays({ status, date_from, date_to }),
+    // date range: pakai end EXCLUSIVE agar 31 Desember tidak ke-skip
+    const date_from = `${year}-01-01`;
+    const date_to_excl = `${year + 1}-01-01`;
+
+    const [staysRes, roomsRes, tenantsRes, countRes] = await Promise.all([
+      stayRepo.listStays({ status, date_from, date_to: date_to_excl, limit, offset }),
       stayRepo.listRooms(),
       stayRepo.listTenants(),
+      stayRepo.countStaysFiltered({ status, date_from, date_to: date_to_excl }),
     ]);
+
+    const stays = staysRes?.rows || [];
+    const rooms = roomsRes?.rows || [];
+    const tenants = tenantsRes?.rows || [];
+
+    const totalRows = Number(countRes?.rows?.[0]?.total || 0);
+    const totalPages = Math.max(1, Math.ceil(totalRows / limit));
 
     res.render("kost/stays/index", {
       title: "Stays",
@@ -71,11 +93,23 @@ async function index(req, res, next) {
       tenants,
       years,
       query: req.query,
+
+      // dipakai EJS untuk dropdown & qs
       filters: {
-        status,
+        status: rawStatus, // <- penting (ALL tetep tampil selected)
         year,
+        limit,
+        page,
+
+        // untuk debugging / transparansi
         date_from,
-        date_to,
+        date_to: date_to_excl, // end exclusive
+      },
+
+      // dipakai EJS untuk footer pagination
+      pagination: {
+        totalRows,
+        totalPages,
       },
     });
   } catch (err) {
@@ -86,10 +120,13 @@ async function index(req, res, next) {
 async function showNew(req, res, next) {
   try {
     const today = todayISO_WIB();
-    const [rooms, tenants] = await Promise.all([
+    const [roomsRes, tenantsRes] = await Promise.all([
       stayRepo.listRooms({ onlyAvailable: true }),
       stayRepo.listTenants(),
     ]);
+
+    const rooms = roomsRes?.rows || [];
+    const tenants = tenantsRes?.rows || [];
 
     res.render("kost/stays/form", {
       title: "New Stay",
@@ -148,19 +185,23 @@ async function create(req, res, next) {
       errors.push("Check-in date tidak boleh di masa lalu (WIB).");
     }
     if (!payload.rent_period) errors.push("Rent period wajib dipilih.");
-
     if (!payload.billing_anchor_day) errors.push("Billing anchor day wajib diisi.");
-
     if (!payload.electricity_mode) errors.push("Electricity mode wajib dipilih.");
-    if (payload.electricity_mode === "FIXED" && payload.electricity_fixed_amount <= 0) {
+    if (
+      payload.electricity_mode === "FIXED" &&
+      payload.electricity_fixed_amount <= 0
+    ) {
       errors.push("Electricity fixed amount wajib > 0 jika mode FIXED.");
     }
 
     if (errors.length) {
-      const [rooms, tenants] = await Promise.all([
+      const [roomsRes, tenantsRes] = await Promise.all([
         stayRepo.listRooms({ onlyAvailable: true }),
         stayRepo.listTenants(),
       ]);
+
+      const rooms = roomsRes?.rows || [];
+      const tenants = tenantsRes?.rows || [];
 
       return res.status(400).render("kost/stays/form", {
         title: "New Stay",
@@ -184,7 +225,8 @@ async function create(req, res, next) {
 async function detail(req, res, next) {
   try {
     const stayId = Number(req.params.id);
-    const stay = await stayRepo.getStayById(stayId);
+    const stayRes = await stayRepo.getStayById(stayId);
+    const stay = stayRes?.rows?.[0] || null;
     if (!stay) return res.status(404).send("Stay not found");
 
     res.render("kost/stays/detail", {
