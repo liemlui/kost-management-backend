@@ -1,12 +1,8 @@
-// modules/kost/repos/_repoUtils.js
+// src/modules/kost/repos/_repoUtils.js
+const { assertPositiveInt } = require("../../shared/ids");
+
 function assertId(id, label) {
-  const n = Number(id);
-  if (!Number.isInteger(n) || n <= 0) {
-    const err = new Error(`Invalid id for ${label}: ${id}`);
-    err.status = 400;
-    throw err;
-  }
-  return n;
+  return assertPositiveInt(id, label);
 }
 
 function assertNullableId(id, label) {

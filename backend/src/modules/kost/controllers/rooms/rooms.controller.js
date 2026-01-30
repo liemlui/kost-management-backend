@@ -174,17 +174,27 @@ async function detail(req, res, next) {
       roomTypesRepo.listRoomTypes(),
     ]);
 
+    // ✅ super clean: compute in controller (SSOT display data)
+    const hasAC =
+      !!room.has_ac || (Array.isArray(roomAmenities) && roomAmenities.some(a => a.amenity_code === "AC"));
+
+    const hasFAN =
+      !!room.has_fan || (Array.isArray(roomAmenities) && roomAmenities.some(a => a.amenity_code === "FAN"));
+
     res.render("kost/rooms/detail", {
       title: `Room ${room.code}`,
       room,
       roomAmenities,
       roomTypes,
+      hasAC,
+      hasFAN,
       query: req.query,
     });
   } catch (err) {
     next(err);
   }
 }
+
 
 async function showEditForm(req, res, next) {
   try {

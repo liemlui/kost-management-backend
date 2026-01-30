@@ -4,10 +4,8 @@
 
 <%
   const _amenities = Array.isArray(roomAmenities) ? roomAmenities : [];
-  // Minimal fallback; idealnya controller yang kirim hasAC/hasFAN
-  const _hasAC = (typeof hasAC !== "undefined") ? !!hasAC : _amenities.some(a => a.amenity_code === "AC");
-  const _hasFAN = (typeof hasFAN !== "undefined") ? !!hasFAN : _amenities.some(a => a.amenity_code === "FAN");
 %>
+
 
 <% if (query && query.type_changed) { %>
   <div class="alert alert-success">Room type updated.</div>
@@ -80,8 +78,8 @@
             : "-" %>
         </li>
 
-        <li><b>AC:</b> <%= _hasAC ? "Yes" : "No" %></li>
-        <li><b>Fan:</b> <%= _hasFAN ? "Yes" : "No" %></li>
+        <li><b>AC:</b> <%= hasAC ? "Yes" : "No" %></li>
+        <li><b>Fan:</b> <%= hasFAN ? "Yes" : "No" %></li>
 
         <li><b>Bathroom Location:</b> <%= room.bathroom_location || "-" %></li>
         <li><b>Bathroom Size (m):</b>
