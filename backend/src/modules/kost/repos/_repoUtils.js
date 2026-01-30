@@ -9,4 +9,9 @@ function assertId(id, label) {
   return n;
 }
 
-module.exports = { assertId };
+function assertNullableId(id, label) {
+  if (id === null || id === undefined || id === "") return null;
+  return assertId(id, label);
+}
+
+module.exports = { assertId, assertNullableId };

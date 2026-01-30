@@ -1,4 +1,4 @@
-// modules/kost/sql/rooms/roomTypes.sql.js
+// src/modules/kost/sql/rooms/roomTypes.sql.js
 
 const ROOM_TYPES_WITH_COUNT = `
   SELECT
@@ -23,8 +23,6 @@ const ROOM_TYPES_WITH_COUNT = `
 
 module.exports = {
   listRoomTypes: ROOM_TYPES_WITH_COUNT,
-
-  // backward compatibility tanpa duplikasi teks query
   listRoomTypesWithRoomCount: ROOM_TYPES_WITH_COUNT,
 
   listActiveRoomTypes: `

@@ -1,12 +1,19 @@
 // modules/kost/repos/rooms/roomTypes.repo.js
 const { query } = require("../../../../db/pool");
 const sql = require("../../sql");
+const { assertId } = require("../_repoUtils");
 
 async function listRoomTypes() {
   const result = await query(sql.rooms.listRoomTypes, [], {
     label: "kost.roomTypes.listRoomTypes",
   });
   return result.rows;
+}
+
+// SQL listRoomTypes kamu sudah include COUNT rooms_count,
+// jadi ini alias yang aman (biar tidak ada ReferenceError).
+async function listRoomTypesWithRoomCount() {
+  return listRoomTypes();
 }
 
 async function listActiveRoomTypes() {
@@ -17,7 +24,8 @@ async function listActiveRoomTypes() {
 }
 
 async function getRoomTypeById(id) {
-  const result = await query(sql.rooms.getRoomTypeById, [id], {
+  const rid = assertId(id, "kost.roomTypes.getRoomTypeById");
+  const result = await query(sql.rooms.getRoomTypeById, [rid], {
     label: "kost.roomTypes.getRoomTypeById",
   });
   return result.rows[0] || null;
@@ -70,6 +78,7 @@ async function insertRoomType(payload) {
 }
 
 async function updateRoomType(id, payload) {
+  const rid = assertId(id, "kost.roomTypes.updateRoomType");
   const {
     code,
     name,
@@ -90,9 +99,9 @@ async function updateRoomType(id, payload) {
   } = payload;
 
   const result = await query(
-    sql.rooms.updateRoomType, // FIX: sebelumnya updateRoomTypeMaster
+    sql.rooms.updateRoomType,
     [
-      id,
+      rid,
       code,
       name,
       base_monthly_price ?? 0,
@@ -117,26 +126,28 @@ async function updateRoomType(id, payload) {
 }
 
 async function toggleRoomTypeActive(id) {
-  const result = await query(sql.rooms.toggleRoomTypeActive, [id], {
+  const rid = assertId(id, "kost.roomTypes.toggleRoomTypeActive");
+  const result = await query(sql.rooms.toggleRoomTypeActive, [rid], {
     label: "kost.roomTypes.toggleRoomTypeActive",
   });
   return result.rows[0] || null;
 }
 
 async function setRoomTypeActive(id, isActive) {
-  const result = await query(sql.rooms.setRoomTypeActive, [id, isActive], {
+  const rid = assertId(id, "kost.roomTypes.setRoomTypeActive");
+  const result = await query(sql.rooms.setRoomTypeActive, [rid, !!isActive], {
     label: "kost.roomTypes.setRoomTypeActive",
   });
   return result.rows[0] || null;
 }
 
-// Wrapper biar tidak ada fungsi “beda nama tapi sama”
 async function deactivateRoomType(id) {
   return setRoomTypeActive(id, false);
 }
 
 async function countRoomsUsingRoomType(roomTypeId) {
-  const result = await query(sql.rooms.countRoomsUsingRoomType, [roomTypeId], {
+  const rid = assertId(roomTypeId, "kost.roomTypes.countRoomsUsingRoomType");
+  const result = await query(sql.rooms.countRoomsUsingRoomType, [rid], {
     label: "kost.roomTypes.countRoomsUsingRoomType",
   });
   return result.rows[0]?.cnt ?? 0;
@@ -144,6 +155,7 @@ async function countRoomsUsingRoomType(roomTypeId) {
 
 module.exports = {
   listRoomTypes,
+  listRoomTypesWithRoomCount,
   listActiveRoomTypes,
   getRoomTypeById,
   insertRoomType,
@@ -152,6 +164,4 @@ module.exports = {
   setRoomTypeActive,
   deactivateRoomType,
   countRoomsUsingRoomType,
-  listRoomTypesWithRoomCount,
-
 };

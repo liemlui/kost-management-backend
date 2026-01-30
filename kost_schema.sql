@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict WKzBHMyHJqZmRrMUPFl7H7hVfAThN7NUrbfr82adYuXUtC10WjUEx6wOkn2wjR8
+\restrict YRYBh3el6at2EwQItKLbmFxqHUDSl5K4RPnnREvhVlMWRDISgY6fQITAFqABUNV
 
 -- Dumped from database version 18.1
 -- Dumped by pg_dump version 18.1
@@ -3273,5 +3273,5 @@ ALTER TABLE ONLY kost.tickets
 -- PostgreSQL database dump complete
 --
 
-\unrestrict WKzBHMyHJqZmRrMUPFl7H7hVfAThN7NUrbfr82adYuXUtC10WjUEx6wOkn2wjR8
+\unrestrict YRYBh3el6at2EwQItKLbmFxqHUDSl5K4RPnnREvhVlMWRDISgY6fQITAFqABUNV
 

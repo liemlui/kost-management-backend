@@ -1,7 +1,7 @@
 // src/modules/kost/repos/rooms/amenity.repo.js
 const { query } = require("../../../../db/pool");
 const sql = require("../../sql");
-const { assertPositiveInt } = require("../../../../shared/ids");
+const { assertId } = require("../_repoUtils");
 
 async function listAmenities() {
   const result = await query(sql.rooms.listAmenities, [], {
@@ -11,7 +11,7 @@ async function listAmenities() {
 }
 
 async function getAmenityById(id) {
-  const aid = assertPositiveInt(id, "kost.amenities.getAmenityById");
+  const aid = assertId(id, "kost.amenities.getAmenityById");
   const result = await query(sql.rooms.getAmenityById, [aid], {
     label: "kost.amenities.getAmenityById",
   });
@@ -31,7 +31,7 @@ async function insertAmenity(payload) {
 }
 
 async function updateAmenity(id, payload) {
-  const aid = assertPositiveInt(id, "kost.amenities.updateAmenity");
+  const aid = assertId(id, "kost.amenities.updateAmenity");
   const { code, name, category, unit_label, is_active } = payload;
 
   const result = await query(
@@ -44,7 +44,7 @@ async function updateAmenity(id, payload) {
 }
 
 async function toggleAmenityActive(id) {
-  const aid = assertPositiveInt(id, "kost.amenities.toggleAmenityActive");
+  const aid = assertId(id, "kost.amenities.toggleAmenityActive");
   const result = await query(sql.rooms.toggleAmenityActive, [aid], {
     label: "kost.amenities.toggleAmenityActive",
   });
