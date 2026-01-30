@@ -20,6 +20,12 @@ const inventoryAnalyticsRoutes = require("./inventory/inventoryAnalytics.routes"
 const inventoryLocationsRoutes = require("./inventory/inventoryLocations.routes");
 const inventoryBalancesRoutes = require("./inventory/inventoryBalances.routes");
 
+// Middleware
+const kostLocals = require("../middlewares/kostLocals.middleware");
+
+// Apply kostLocals middleware to all routes in this router
+router.use(kostLocals);
+
 // Home redirect
 router.get("/", (req, res) => {
   res.redirect("/admin/kost/rooms");

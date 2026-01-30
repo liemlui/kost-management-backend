@@ -1,8 +1,16 @@
+<!-- // kost/rooms/_form.ejs -->
+
 <%- include("../partials/helpers") %>
+
+<%
+  // super clean: prefer flash.form for repopulate after redirect
+  const f = (flash && flash.form) ? flash.form : (form || {});
+  const _hasFlashErrors = flash && Array.isArray(flash.errors) && flash.errors.length > 0;
+%>
 
 <h1 class="h3 mb-3"><%= heading %></h1>
 
-<% if (errors && errors.length) { %>
+<% if (!_hasFlashErrors && errors && errors.length) { %>
   <div class="alert alert-danger">
     <ul class="mb-0">
       <% errors.forEach(e => { %><li><%= e %></li><% }) %>
@@ -14,7 +22,7 @@
   <div class="row g-3">
     <div class="col-md-4">
       <label class="form-label">Code</label>
-      <input class="form-control mono" name="code" value="<%= form.code %>" required />
+      <input class="form-control mono" name="code" value="<%= f.code || '' %>" required />
     </div>
 
     <div class="col-md-5">
@@ -22,7 +30,7 @@
       <select class="form-select" name="room_type_id" required>
         <option value="">-- select --</option>
         <% (roomTypes || []).forEach(rt => { %>
-          <option value="<%= rt.id %>" <%= String(form.room_type_id)===String(rt.id) ? "selected" : "" %>>
+          <option value="<%= rt.id %>" <%= String(f.room_type_id)===String(rt.id) ? "selected" : "" %>>
             <%= rt.code %> — <%= rt.name %>
           </option>
         <% }) %>
@@ -32,8 +40,8 @@
     <div class="col-md-3">
       <label class="form-label">Floor</label>
       <select class="form-select" name="floor" required>
-        <% (floorOptions || []).forEach(f => { %>
-          <option value="<%= f %>" <%= Number(form.floor)===Number(f) ? "selected" : "" %>><%= f %></option>
+        <% (floorOptions || []).forEach(x => { %>
+          <option value="<%= x %>" <%= Number(f.floor)===Number(x) ? "selected" : "" %>><%= x %></option>
         <% }) %>
       </select>
     </div>
@@ -42,7 +50,7 @@
       <label class="form-label">Position Zone</label>
       <select class="form-select" name="position_zone">
         <% (zoneOptions || []).forEach(z => { %>
-          <option value="<%= z %>" <%= (form.position_zone || "")===z ? "selected" : "" %>>
+          <option value="<%= z %>" <%= (f.position_zone || "")===z ? "selected" : "" %>>
             <%= z === "" ? "-- none --" : z %>
           </option>
         <% }) %>
@@ -53,14 +61,14 @@
       <label class="form-label">Status</label>
       <select class="form-select" name="status" required>
         <% (statusOptions || []).forEach(s => { %>
-          <option value="<%= s %>" <%= (form.status || "AVAILABLE")===s ? "selected" : "" %>><%= s %></option>
+          <option value="<%= s %>" <%= (f.status || "AVAILABLE")===s ? "selected" : "" %>><%= s %></option>
         <% }) %>
       </select>
     </div>
 
     <div class="col-12">
       <label class="form-label">Notes</label>
-      <textarea class="form-control" name="notes" rows="3"><%= form.notes || "" %></textarea>
+      <textarea class="form-control" name="notes" rows="3"><%= f.notes || "" %></textarea>
     </div>
   </div>
 

@@ -1,28 +1,8 @@
-<!-- admin/kost/stays/detail.ejs -->
+<!-- kost/stays/detail.ejs -->
 <%- include('../partials/header', { title }) %>
+<%- include('../partials/helpers') %>
 
 <h1 class="h3 mb-3">Stay Detail</h1>
-
-<%
-  function idr(v) {
-    const n = Number(v || 0);
-    const rounded = Math.round(n);
-    return "Rp " + String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  }
-  function dateOnly(v) {
-    if (!v) return "-";
-    const d = new Date(v);
-    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" }); // YYYY-MM-DD
-  }
-    function anchorDay(stay) {
-    if (stay.billing_anchor_day !== null && stay.billing_anchor_day !== undefined && stay.billing_anchor_day !== "") {
-      return stay.billing_anchor_day;
-    }
-    if (!stay.check_in_at) return "-";
-    const d = new Date(stay.check_in_at);
-    return Number(d.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta", day: "2-digit" }));
-  }
-%>
 
 <div class="card p-3 mb-3">
   <div class="row g-3">
@@ -38,12 +18,12 @@
 
       <div class="mb-2 d-flex justify-content-between">
         <span>Base rent</span>
-        <strong><%= idr(stay.base_rent_amount) %></strong>
+        <strong><%= fmtIDR(stay.base_rent_amount) %></strong>
       </div>
 
       <div class="mb-2 d-flex justify-content-between">
         <span>Additional rent</span>
-        <strong><%= idr(stay.additional_rent_amount) %></strong>
+        <strong><%= fmtIDR(stay.additional_rent_amount) %></strong>
       </div>
 
       <% if (stay.additional_rent_reason) { %>
@@ -54,7 +34,7 @@
 
       <div class="mb-2 d-flex justify-content-between">
         <span>Discount</span>
-        <strong>- <%= idr(stay.discount_amount) %></strong>
+        <strong>- <%= fmtIDR(stay.discount_amount) %></strong>
       </div>
 
       <% if (stay.discount_reason) { %>
@@ -67,22 +47,25 @@
 
       <div class="mb-2 d-flex justify-content-between">
         <span><strong>Total contract (Agreed rent)</strong></span>
-        <strong class="fs-5"><%= idr(stay.agreed_rent_amount) %></strong>
+        <strong class="fs-5"><%= fmtIDR(stay.agreed_rent_amount) %></strong>
       </div>
 
       <div class="mb-2 d-flex justify-content-between">
         <span>Deposit</span>
-        <strong><%= idr(stay.deposit_amount) %></strong>
+        <strong><%= fmtIDR(stay.deposit_amount) %></strong>
       </div>
     </div>
 
     <div class="col-md-6">
       <h6 class="mb-2">Dates</h6>
-      <div class="mb-2"><strong>Check-in:</strong> <%= dateOnly(stay.check_in_at) %></div>
-      <div class="mb-2"><strong>Planned check-out:</strong> <%= dateOnly(stay.planned_check_out_at) %></div>
-      <div class="mb-2"><strong>Check-out:</strong> <%= dateOnly(stay.check_out_at) %></div>
-      <div class="mb-2"><strong>Physical check-out:</strong> <%= dateOnly(stay.physical_check_out_at) %></div>
-      <div class="mb-2"><strong>Billing anchor day:</strong> <%= anchorDay(stay)  %></div>
+      <div class="mb-2"><strong>Check-in:</strong> <%= fmtDate(stay.check_in_at) %></div>
+      <div class="mb-2"><strong>Planned check-out:</strong> <%= fmtDate(stay.planned_check_out_at) %></div>
+      <div class="mb-2"><strong>Check-out:</strong> <%= fmtDate(stay.check_out_at) %></div>
+      <div class="mb-2"><strong>Physical check-out:</strong> <%= fmtDate(stay.physical_check_out_at) %></div>
+
+      <div class="mb-2">
+        <strong>Billing anchor day:</strong> <%= stay.billing_anchor_day_display || stay.billing_anchor_day || "-" %>
+      </div>
 
       <hr/>
 
@@ -90,9 +73,9 @@
       <div class="mb-2"><strong>Electricity mode:</strong> <%= stay.electricity_mode %></div>
       <div class="mb-2">
         <strong>Fixed amounts:</strong>
-        Elec <%= idr(stay.electricity_fixed_amount ?? 0) %>,
-        Water <%= idr(stay.water_fixed_amount ?? 0) %>,
-        Internet <%= idr(stay.internet_fixed_amount ?? 0) %>
+        Elec <%= fmtIDR(stay.electricity_fixed_amount ?? 0) %>,
+        Water <%= fmtIDR(stay.water_fixed_amount ?? 0) %>,
+        Internet <%= fmtIDR(stay.internet_fixed_amount ?? 0) %>
       </div>
 
       <% if (stay.notes) { %>
@@ -107,25 +90,18 @@
   <a class="btn btn-outline-secondary" href="/admin/kost/stays">Back</a>
 
   <% if (stay.status === 'ACTIVE') { %>
-    <form
-      method="POST"
-      action="/admin/kost/stays/<%= stay.id %>/checkout"
-      onsubmit="return confirm('Checkout this stay?');"
-    >
+    <form method="POST" action="/admin/kost/stays/<%= stay.id %>/checkout"
+          onsubmit="return confirm('Checkout this stay?');">
       <button class="btn btn-danger" type="submit">Checkout</button>
     </form>
   <% } %>
+
   <% if (!stay.physical_check_out_at) { %>
-  <form
-    method="POST"
-    action="/admin/kost/stays/<%= stay.id %>/physical-checkout"
-    onsubmit="return confirm('Mark physical check-out (tenant has moved out and returned key)?');"
-  >
-    <button class="btn btn-outline-primary" type="submit">Mark Physical Check-out</button>
-  </form>
-<% } %>
+    <form method="POST" action="/admin/kost/stays/<%= stay.id %>/physical-checkout"
+          onsubmit="return confirm('Mark physical check-out (tenant has moved out and returned key)?');">
+      <button class="btn btn-outline-primary" type="submit">Mark Physical Check-out</button>
+    </form>
+  <% } %>
 </div>
-
-
 
 <%- include('../partials/footer') %>

@@ -43,21 +43,28 @@
     </div>
   </div>
 </nav>
-<!-- Flash Messages -->
-<% if (flash && flash.type) { %>
-  <div class="container container-narrow mt-3">
-    <div class="alert alert-<%= flash.type === 'danger' ? 'danger' : (flash.type === 'error' ? 'danger' : flash.type) %> alert-dismissible fade show" role="alert">
-      <% if (flash.messages && Array.isArray(flash.messages)) { %>
-        <ul class="mb-0 ps-3">
-          <% flash.messages.forEach(function(message) { %>
-            <li><%= message %></li>
-          <% }) %>
-        </ul>
-      <% } else if (flash.message) { %>
-        <%= flash.message %>
-      <% } %>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+<main class="container container-narrow py-4">
+  <%
+// flash contract dari res.locals.flash (selalu ada)
+const _f = flash || {};
+const _errors = Array.isArray(_f.errors) ? _f.errors.filter(Boolean) : [];
+%>
+
+<% if (_f.success) { %>
+  <div class="alert alert-success"><%= _f.success %></div>
+<% } %>
+
+<% if (_f.error) { %>
+  <div class="alert alert-danger"><%= _f.error %></div>
+<% } %>
+
+<% if (_errors.length) { %>
+  <div class="alert alert-danger">
+    <ul class="mb-0">
+      <% _errors.forEach(e => { %>
+        <li><%= e %></li>
+      <% }) %>
+    </ul>
   </div>
 <% } %>
-<main class="container container-narrow py-4">
+
