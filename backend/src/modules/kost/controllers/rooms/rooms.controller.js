@@ -51,10 +51,11 @@ async function index(req, res, next) {
   try {
     const roomTypeId = toIntOrNull(req.query.room_type_id);
 
-    const [rooms, roomTypes] = await Promise.all([
-      roomRepo.listRooms(roomTypeId),
-      roomTypesRepo.listAllRoomTypes(), // aktif saja (repo sudah filter)
-    ]);
+const [rooms, roomTypes] = await Promise.all([
+  roomRepo.listRooms(roomTypeId),
+  roomTypesRepo.listActiveRoomTypes(),
+]);
+
 
     res.render("kost/rooms/index", {
       title: "Rooms",
@@ -71,7 +72,7 @@ async function index(req, res, next) {
 
 async function showNewForm(req, res, next) {
   try {
-    const roomTypes = await roomTypesRepo.listActiveRoomTypes(); // ✅ rows[]
+const roomTypes = await roomTypesRepo.listActiveRoomTypes();
     res.render("kost/rooms/new", {
       title: "New Room",
       roomTypes,
@@ -186,11 +187,12 @@ async function showEditForm(req, res, next) {
   try {
     const id = Number(req.params.id);
 
-    const [roomTypes, room, roomAmenities] = await Promise.all([
-      roomTypesRepo.listActiveRoomTypes(),
-      roomRepo.getRoomById(id),
-      roomAmenityRepo.listRoomAmenities(id),
-    ]);
+const [roomTypes, room, roomAmenities] = await Promise.all([
+  roomTypesRepo.listActiveRoomTypes(),
+  roomRepo.getRoomById(id),
+  roomAmenityRepo.listRoomAmenities(id),
+]);
+
 
     if (!room) return res.status(404).send("Room not found");
 
@@ -223,7 +225,7 @@ async function update(req, res, next) {
     const payload = normalizeRoomPayload(req.body);
     const errors = validateRoomPayload(payload);
 
-    const roomTypes = await roomTypesRepo.listActiveRoomTypes();
+const roomTypes = await roomTypesRepo.listActiveRoomTypes();
 
     if (errors.length) {
       return res.status(400).render("kost/rooms/edit", {

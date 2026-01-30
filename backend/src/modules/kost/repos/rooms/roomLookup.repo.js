@@ -1,9 +1,9 @@
-// src/modules/kost/repos/rooms/roomLookup.repo.js
+// modules/kost/repos/rooms/roomLookup.repo.js
 const roomRepo = require("./room.repo");
 
 /**
- * Room lookup for dropdowns/autocomplete.
- * Query tetap 1 sumber di room.repo.js (no duplication).
+ * Compatibility wrapper.
+ * SSOT: room.repo.js + rooms.sql.js
  */
 async function listRoomsForDropdown() {
   return roomRepo.listRoomsForDropdown();

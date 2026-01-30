@@ -2,10 +2,6 @@
 const { query } = require("../../../../db/pool");
 const sql = require("../../sql");
 
-/**
- * List all room types (admin view).
- * Returns rows[].
- */
 async function listRoomTypes() {
   const result = await query(sql.rooms.listRoomTypes, [], {
     label: "kost.roomTypes.listRoomTypes",
@@ -13,10 +9,13 @@ async function listRoomTypes() {
   return result.rows;
 }
 
-/**
- * Get single room type by id.
- * Returns row object or null.
- */
+async function listActiveRoomTypes() {
+  const result = await query(sql.rooms.listActiveRoomTypes, [], {
+    label: "kost.roomTypes.listActiveRoomTypes",
+  });
+  return result.rows;
+}
+
 async function getRoomTypeById(id) {
   const result = await query(sql.rooms.getRoomTypeById, [id], {
     label: "kost.roomTypes.getRoomTypeById",
@@ -24,11 +23,6 @@ async function getRoomTypeById(id) {
   return result.rows[0] || null;
 }
 
-/**
- * Insert new room type.
- * Payload should match schema columns.
- * Returns inserted row (at least { id } depending on SQL RETURNING).
- */
 async function insertRoomType(payload) {
   const {
     code,
@@ -69,16 +63,12 @@ async function insertRoomType(payload) {
       !!is_active,
       notes || null,
     ],
-    { label: "kost.roomTypes.insertRoomType" },
+    { label: "kost.roomTypes.insertRoomType" }
   );
 
   return result.rows[0];
 }
 
-/**
- * Update existing room type.
- * Returns updated row (or null).
- */
 async function updateRoomType(id, payload) {
   const {
     code,
@@ -95,13 +85,12 @@ async function updateRoomType(id, payload) {
     has_fan,
     bed_type,
     bed_size_cm,
-
     is_active,
     notes,
   } = payload;
 
   const result = await query(
-    sql.rooms.updateRoomTypeMaster,
+    sql.rooms.updateRoomType, // FIX: sebelumnya updateRoomTypeMaster
     [
       id,
       code,
@@ -121,16 +110,12 @@ async function updateRoomType(id, payload) {
       !!is_active,
       notes || null,
     ],
-    { label: "kost.roomTypes.updateRoomType" },
+    { label: "kost.roomTypes.updateRoomType" }
   );
 
   return result.rows[0] || null;
 }
 
-/**
- * Toggle active state of room type.
- * Returns { id, is_active } if SQL returns it.
- */
 async function toggleRoomTypeActive(id) {
   const result = await query(sql.rooms.toggleRoomTypeActive, [id], {
     label: "kost.roomTypes.toggleRoomTypeActive",
@@ -145,29 +130,21 @@ async function setRoomTypeActive(id, isActive) {
   return result.rows[0] || null;
 }
 
+// Wrapper biar tidak ada fungsi “beda nama tapi sama”
 async function deactivateRoomType(id) {
-  const result = await query(sql.rooms.deactivateRoomType, [id], {
-    label: "kost.roomTypes.deactivateRoomType",
-  });
-  return result.rows[0] || null;
+  return setRoomTypeActive(id, false);
 }
+
 async function countRoomsUsingRoomType(roomTypeId) {
-  const result = await query(
-    sql.rooms.countRoomsUsingRoomType,
-    [roomTypeId],
-    { label: "kost.roomTypes.countRoomsUsingRoomType" },
-  );
-  return result.rows[0]?.cnt ?? 0;
-}
-async function listRoomTypesWithRoomCount() {
-  const result = await query(sql.rooms.listRoomTypesWithRoomCount, [], {
-    label: "kost.roomTypes.listRoomTypesWithRoomCount",
+  const result = await query(sql.rooms.countRoomsUsingRoomType, [roomTypeId], {
+    label: "kost.roomTypes.countRoomsUsingRoomType",
   });
-  return result.rows;
+  return result.rows[0]?.cnt ?? 0;
 }
 
 module.exports = {
   listRoomTypes,
+  listActiveRoomTypes,
   getRoomTypeById,
   insertRoomType,
   updateRoomType,
@@ -175,5 +152,4 @@ module.exports = {
   setRoomTypeActive,
   deactivateRoomType,
   countRoomsUsingRoomType,
-  listRoomTypesWithRoomCount,
 };

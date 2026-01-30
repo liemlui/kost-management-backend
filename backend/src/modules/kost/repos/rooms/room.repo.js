@@ -1,18 +1,14 @@
-// src/modules/kost/repos/rooms/room.repo.js
+// modules/kost/repos/rooms/room.repo.js
 const { query } = require("../../../../db/pool");
-const sql = require("../../sql");
-const { assertPositiveInt } = require("../../../../shared/ids");
+const sql = require("../../sql"); // registry SQL kost.*
+const { assertId } = require("../_repoUtils");
 
 async function q(statement, params, label) {
   return query(statement, params, { label: label || "kost.room.repo" });
 }
 
 async function listRooms(roomTypeId = null) {
-  const { rows } = await q(
-    sql.rooms.listRooms,
-    [roomTypeId],
-    "kost.rooms.listRooms"
-  );
+  const { rows } = await q(sql.rooms.listRooms, [roomTypeId], "kost.rooms.listRooms");
   return rows;
 }
 
@@ -26,12 +22,8 @@ async function listRoomsForDropdown() {
 }
 
 async function getRoomById(id) {
-  const roomId = assertPositiveInt(id, "kost.rooms.getRoomById");
-  const { rows } = await q(
-    sql.rooms.getRoomById,
-    [roomId],
-    "kost.rooms.getRoomById"
-  );
+  const roomId = assertId(id, "kost.rooms.getRoomById");
+  const { rows } = await q(sql.rooms.getRoomById, [roomId], "kost.rooms.getRoomById");
   return rows[0] || null;
 }
 
@@ -49,7 +41,7 @@ async function insertRoom(payload) {
 }
 
 async function updateRoom({ id, ...payload }) {
-  const roomId = assertPositiveInt(id, "kost.rooms.updateRoom");
+  const roomId = assertId(id, "kost.rooms.updateRoom");
   const params = [
     roomId,
     payload.code,
@@ -63,27 +55,30 @@ async function updateRoom({ id, ...payload }) {
   return rows[0] || null;
 }
 
+/**
+ * Soft delete (INACTIVE).
+ */
 async function deleteRoom(id) {
-  const roomId = assertPositiveInt(id, "kost.rooms.deleteRoom");
+  const roomId = assertId(id, "kost.rooms.deleteRoom");
   const result = await q(sql.rooms.deleteRoom, [roomId], "kost.rooms.deleteRoom");
   return { rowCount: result.rowCount };
 }
 
 async function blockRoom(id) {
-  const roomId = assertPositiveInt(id, "kost.rooms.blockRoom");
+  const roomId = assertId(id, "kost.rooms.blockRoom");
   const { rows } = await q(sql.rooms.blockRoom, [roomId], "kost.rooms.blockRoom");
   return rows[0] || null;
 }
 
 async function unblockRoom(id) {
-  const roomId = assertPositiveInt(id, "kost.rooms.unblockRoom");
+  const roomId = assertId(id, "kost.rooms.unblockRoom");
   const { rows } = await q(sql.rooms.unblockRoom, [roomId], "kost.rooms.unblockRoom");
   return rows[0] || null;
 }
 
 async function updateRoomType(roomId, roomTypeId) {
-  const rid = assertPositiveInt(roomId, "kost.rooms.updateRoomType.roomId");
-  const rtid = assertPositiveInt(roomTypeId, "kost.rooms.updateRoomType.roomTypeId");
+  const rid = assertId(roomId, "kost.rooms.updateRoomType.roomId");
+  const rtid = assertId(roomTypeId, "kost.rooms.updateRoomType.roomTypeId");
 
   const { rows } = await q(
     sql.rooms.updateRoomTypeId,
