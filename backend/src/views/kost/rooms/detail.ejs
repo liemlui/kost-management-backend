@@ -1,11 +1,12 @@
-// backend/src/views/kost/rooms/detail.ejs
+<!-- backend/src/views/kost/rooms/detail.ejs -->
 <%- include('../partials/header', { title }) %>
 <%- include('../partials/helpers') %>
 
 <%
   const _amenities = Array.isArray(roomAmenities) ? roomAmenities : [];
-  const hasAC = _amenities.some(a => a.amenity_code === "AC");
-  const hasFAN = _amenities.some(a => a.amenity_code === "FAN");
+  // Minimal fallback; idealnya controller yang kirim hasAC/hasFAN
+  const _hasAC = (typeof hasAC !== "undefined") ? !!hasAC : _amenities.some(a => a.amenity_code === "AC");
+  const _hasFAN = (typeof hasFAN !== "undefined") ? !!hasFAN : _amenities.some(a => a.amenity_code === "FAN");
 %>
 
 <% if (query && query.type_changed) { %>
@@ -21,8 +22,7 @@
   <div class="d-flex gap-2">
     <a class="btn btn-outline-secondary" href="/admin/kost/rooms">Back</a>
     <a class="btn btn-outline-primary" href="/admin/kost/rooms/<%= room.id %>/edit">Edit</a>
-      <a class="btn btn-outline-dark" href="/admin/kost/rooms/<%= room.id %>/assets">Assets</a>
-
+    <a class="btn btn-outline-dark" href="/admin/kost/rooms/<%= room.id %>/assets">Assets</a>
   </div>
 </div>
 
@@ -44,8 +44,9 @@
       <hr />
 
       <div class="d-flex gap-2">
-        <form method="POST" action="/admin/kost/rooms/<%= room.id %>/delete" onsubmit="return confirm('Delete room ini? (akan gagal kalau ada stays)')">
-          <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+        <form method="POST" action="/admin/kost/rooms/<%= room.id %>/delete"
+              onsubmit="return confirm('Set room INACTIVE? (akan gagal kalau ada stays)')">
+          <button class="btn btn-sm btn-outline-danger" type="submit">Set INACTIVE</button>
         </form>
 
         <% if (room.status !== "MAINTENANCE") { %>
@@ -79,9 +80,9 @@
             : "-" %>
         </li>
 
+        <li><b>AC:</b> <%= _hasAC ? "Yes" : "No" %></li>
+        <li><b>Fan:</b> <%= _hasFAN ? "Yes" : "No" %></li>
 
-        <li><b>AC:</b> <%= hasAC ? "Yes" : "No" %></li>
-        <li><b>Fan:</b> <%= hasFAN ? "Yes" : "No" %></li>
         <li><b>Bathroom Location:</b> <%= room.bathroom_location || "-" %></li>
         <li><b>Bathroom Size (m):</b>
           <%= (room.bathroom_width_m != null && room.bathroom_length_m != null)
@@ -91,22 +92,20 @@
         <li><b>Bed Type:</b> <%= room.bed_type || "-" %></li>
         <li><b>Bed Size (cm):</b> <%= room.bed_size_cm || "-" %></li>
       </ul>
+
       <hr />
-        <div class="d-flex gap-2">
+
+      <div class="d-flex gap-2">
         <button class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#changeRoomTypeModal">
-            Change Room Type
+          Change Room Type
         </button>
-
-        <a class="btn btn-sm btn-outline-secondary" href="/admin/kost/room-types">
-            View Room Types
-        </a>
-        </div>
-
+        <a class="btn btn-sm btn-outline-secondary" href="/admin/kost/room-types">View Room Types</a>
+      </div>
 
       <hr />
       <div class="text-muted small">
-        <div><b>Created:</b> <%= room.created_at %></div>
-        <div><b>Updated:</b> <%= room.updated_at %></div>
+        <div><b>Created:</b> <%= fmtDate(room.created_at) %></div>
+        <div><b>Updated:</b> <%= fmtDate(room.updated_at) %></div>
       </div>
     </div>
   </div>
@@ -129,8 +128,8 @@
           <label class="form-label">Room Type</label>
           <select name="room_type_id" class="form-select" required>
             <% (roomTypes || []).forEach(rt => { %>
-              <option value="<%= rt.id %>" <%= (rt.id === room.room_type_id ? "selected" : "") %>>
-                <%= rt.code %> — <%= rt.name %> (Rp <%= Number(rt.base_monthly_price||0).toLocaleString("id-ID") %>)
+              <option value="<%= rt.id %>" <%= (String(rt.id) === String(room.room_type_id) ? "selected" : "") %>>
+                <%= rt.code %> — <%= rt.name %> (<%= fmtIDR(rt.base_monthly_price) %>)
               </option>
             <% }) %>
           </select>
@@ -144,7 +143,6 @@
     </div>
   </div>
 </div>
-
 
 <hr class="my-4" />
 
@@ -188,6 +186,5 @@
     </table>
   </div>
 <% } %>
-
 
 <%- include('../partials/footer') %>
