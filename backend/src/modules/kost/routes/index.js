@@ -5,7 +5,6 @@ const router = express.Router();
 const roomsRoutes = require("./rooms/rooms.routes");
 const roomTypesRoutes = require("./rooms/roomTypes.routes");
 const amenitiesRoutes = require("./rooms/amenities.routes");
-const roomAmenitiesRoutes = require("./rooms/roomAmenities.routes");
 
 // Tenants & Stays
 const tenantsRoutes = require("./tenants/tenants.routes");
@@ -21,9 +20,6 @@ const inventoryAnalyticsRoutes = require("./inventory/inventoryAnalytics.routes"
 const inventoryLocationsRoutes = require("./inventory/inventoryLocations.routes");
 const inventoryBalancesRoutes = require("./inventory/inventoryBalances.routes");
 
-// Assets (room-specific)
-const assetsRoutes = require("./assets/assets.routes");
-
 // Home redirect
 router.get("/", (req, res) => {
   res.redirect("/admin/kost/rooms");
@@ -31,12 +27,8 @@ router.get("/", (req, res) => {
 
 // ===== ROOMS & RELATED =====
 router.use("/rooms", roomsRoutes);
-// Room assets should be under specific room
-// DIPINDAH: assetsRoutes akan di-handle oleh rooms.routes
-
 router.use("/room-types", roomTypesRoutes);
 router.use("/amenities", amenitiesRoutes);
-// Room amenities handled by rooms.routes
 
 // ===== TENANTS & STAYS =====
 router.use("/tenants", tenantsRoutes);

@@ -1,8 +1,9 @@
-// modules/kost/routes/rooms/roomAmenities.routes.js
 const express = require("express");
 const router = express.Router({ mergeParams: true });
+
 const c = require("../../controllers/rooms/roomAmenities.controller");
 
+// Base path (mounted): /admin/kost/rooms/:id/amenities
 router.get("/", c.manageRoomAmenities);
 router.post("/", c.addRoomAmenity);
 router.post("/:roomAmenityId", c.updateRoomAmenity);

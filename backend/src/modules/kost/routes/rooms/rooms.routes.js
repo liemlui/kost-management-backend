@@ -1,6 +1,9 @@
 const express = require("express");
 const roomsController = require("../../controllers/rooms/rooms.controller");
-//const assetsController = require("../../controllers/assets/roomAssets.controller");
+
+const roomAmenitiesRoutes = require("./roomAmenities.routes");
+// OPTIONAL kalau assets memang ada:
+// const assetsRoutes = require("../assets/assets.routes");
 
 const router = express.Router();
 
@@ -18,10 +21,12 @@ router.post("/:id/block", roomsController.block);
 router.post("/:id/unblock", roomsController.unblock);
 router.post("/:id/change-type", roomsController.changeRoomType);
 
-// // Room Assets (nested under room)
-// router.get("/:id/assets", assetsController.index);
-// router.get("/:id/assets/new", assetsController.showNewForm);
-// router.post("/:id/assets", assetsController.create);
-// // ... tambahkan routes asset lainnya sesuai kebutuhan
+// ✅ Nested: Room Amenities
+// Base path: /admin/kost/rooms/:id/amenities
+router.use("/:id/amenities", roomAmenitiesRoutes);
+
+// ✅ Nested: Room Assets (kalau modul assets sudah siap)
+// Base path: /admin/kost/rooms/:id/assets
+// router.use("/:id/assets", assetsRoutes);
 
 module.exports = router;
