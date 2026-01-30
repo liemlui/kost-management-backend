@@ -17,22 +17,28 @@ const ALLOWED_CONDITIONS = new Set(["NEW", "GOOD", "FAIR", "DAMAGED", "MISSING"]
 async function manageRoomAmenities(req, res, next) {
   try {
     const roomId = Number(req.params.id);
+    if (!Number.isInteger(roomId) || roomId <= 0) {
+      return res.status(400).send("Invalid room id");
+    }
+
     const room = await roomRepo.getRoomById(roomId);
-    if (!Number.isInteger(roomId) || roomId <= 0) return res.status(400).send("Invalid room id");
+    if (!room) return res.status(404).send("Room not found");
 
     const roomAmenities = await roomAmenityRepo.listRoomAmenities(roomId);
     const picklist = await roomAmenityRepo.listActiveAmenitiesNotInRoom(roomId);
 
-    res.render("kost/rooms/amenities", {
+    return res.render("kost/rooms/amenities", {
       title: `Manage Amenities — Room ${room.code}`,
       room,
       roomAmenities,
       picklist,
+      allowedConditions: Array.from(ALLOWED_CONDITIONS),
     });
   } catch (err) {
     next(err);
   }
 }
+
 
 async function addRoomAmenity(req, res, next) {
   try {
@@ -74,9 +80,16 @@ async function updateRoomAmenity(req, res, next) {
     const roomId = Number(req.params.id);
     const roomAmenityId = toIntOrNull(req.params.roomAmenityId);
 
+    if (!Number.isInteger(roomId) || roomId <= 0) {
+      return res.status(400).send("Invalid room id");
+    }
+    if (!Number.isInteger(roomAmenityId) || roomAmenityId <= 0) {
+      return res.status(400).send("Invalid roomAmenityId");
+    }
+
     const qty = toQty(req.body.qty);
     const conditionRaw = (req.body.condition || "").trim();
-    const condition = conditionRaw ? conditionRaw : null;
+    const condition = conditionRaw ? conditionRaw.toUpperCase() : null;
 
     if (condition && !ALLOWED_CONDITIONS.has(condition)) {
       return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
@@ -88,14 +101,13 @@ async function updateRoomAmenity(req, res, next) {
       notes: toNullIfEmpty(req.body.notes),
     });
 
-    // kalau tidak ketemu / bukan milik room itu
     if (!updated) return res.status(404).send("Room amenity not found");
-
     return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
   } catch (err) {
     next(err);
   }
 }
+
 
 async function deleteRoomAmenity(req, res, next) {
   try {

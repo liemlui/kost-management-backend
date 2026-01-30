@@ -11,7 +11,6 @@ const {
 const { setFlash, setFlashErrors } = require("../../../../shared/flash");
 const logger = require("../../../../config/logger");
 
-
 const FLOOR_OPTIONS = [1, 2];
 const ZONE_OPTIONS = ["", "FRONT", "MIDDLE", "BACK"]; // "" => null
 const STATUS_OPTIONS = ["AVAILABLE", "MAINTENANCE", "INACTIVE"];
@@ -37,12 +36,11 @@ function validateRoomPayload(p) {
     errors.push("Room type wajib dipilih.");
   if (!p.floor || !FLOOR_OPTIONS.includes(p.floor))
     errors.push("Floor hanya boleh 1 atau 2.");
-  if (
-    p.position_zone &&
-    !["FRONT", "MIDDLE", "BACK"].includes(p.position_zone)
-  ) {
+  // di validateRoomPayload:
+  if (p.position_zone && !ZONE_OPTIONS.includes(p.position_zone)) {
     errors.push("Position zone tidak valid.");
   }
+
   if (!STATUS_OPTIONS.includes(p.status)) errors.push("Status tidak valid.");
   return errors;
 }
@@ -51,11 +49,10 @@ async function index(req, res, next) {
   try {
     const roomTypeId = toIntOrNull(req.query.room_type_id);
 
-const [rooms, roomTypes] = await Promise.all([
-  roomRepo.listRooms(roomTypeId),
-  roomTypesRepo.listActiveRoomTypes(),
-]);
-
+    const [rooms, roomTypes] = await Promise.all([
+      roomRepo.listRooms(roomTypeId),
+      roomTypesRepo.listActiveRoomTypes(),
+    ]);
 
     res.render("kost/rooms/index", {
       title: "Rooms",
@@ -72,7 +69,7 @@ const [rooms, roomTypes] = await Promise.all([
 
 async function showNewForm(req, res, next) {
   try {
-const roomTypes = await roomTypesRepo.listActiveRoomTypes();
+    const roomTypes = await roomTypesRepo.listActiveRoomTypes();
     res.render("kost/rooms/new", {
       title: "New Room",
       roomTypes,
@@ -95,11 +92,11 @@ const roomTypes = await roomTypesRepo.listActiveRoomTypes();
 }
 async function create(req, res, next) {
   try {
-    logger.info("rooms.create.start", { 
+    logger.info("rooms.create.start", {
       body: req.body,
-      sessionId: req.sessionID?.substring(0, 10) + '...'
+      sessionId: req.sessionID?.substring(0, 10) + "...",
     });
-    
+
     const payload = normalizeRoomPayload(req.body);
     const errors = validateRoomPayload(payload);
 
@@ -128,21 +125,21 @@ async function create(req, res, next) {
       throw e;
     }
 
-    logger.info("rooms.create.success", { 
-      roomId: newId, 
-      code: payload.code 
+    logger.info("rooms.create.success", {
+      roomId: newId,
+      code: payload.code,
     });
-    
+
     await setFlash(req, "success", `Room "${payload.code}" berhasil dibuat`);
-    
+
     return res.redirect(`/admin/kost/rooms/${newId}`);
   } catch (err) {
-    logger.error("rooms.create.error", { 
-      error: err.message, 
+    logger.error("rooms.create.error", {
+      error: err.message,
       code: err.code,
-      sessionId: req.sessionID?.substring(0, 10) + '...'
+      sessionId: req.sessionID?.substring(0, 10) + "...",
     });
-    
+
     if (err.code === "23505") {
       const roomTypes = await roomTypesRepo.listActiveRoomTypes();
       await setFlashErrors(req, "Room code sudah dipakai (harus unique).");
@@ -187,12 +184,11 @@ async function showEditForm(req, res, next) {
   try {
     const id = Number(req.params.id);
 
-const [roomTypes, room, roomAmenities] = await Promise.all([
-  roomTypesRepo.listActiveRoomTypes(),
-  roomRepo.getRoomById(id),
-  roomAmenityRepo.listRoomAmenities(id),
-]);
-
+    const [roomTypes, room, roomAmenities] = await Promise.all([
+      roomTypesRepo.listActiveRoomTypes(),
+      roomRepo.getRoomById(id),
+      roomAmenityRepo.listRoomAmenities(id),
+    ]);
 
     if (!room) return res.status(404).send("Room not found");
 
@@ -225,7 +221,7 @@ async function update(req, res, next) {
     const payload = normalizeRoomPayload(req.body);
     const errors = validateRoomPayload(payload);
 
-const roomTypes = await roomTypesRepo.listActiveRoomTypes();
+    const roomTypes = await roomTypesRepo.listActiveRoomTypes();
 
     if (errors.length) {
       return res.status(400).render("kost/rooms/edit", {
@@ -246,7 +242,7 @@ const roomTypes = await roomTypesRepo.listActiveRoomTypes();
     return res.redirect(`/admin/kost/rooms/${id}`);
   } catch (err) {
     if (err.code === "23505") {
-      const roomTypes = await roomTypeRepo.listRoomTypes();
+      const roomTypes = await roomTypesRepo.listActiveRoomTypes();
       return res.status(400).render("kost/rooms/edit", {
         title: `Edit Room`,
         roomTypes,

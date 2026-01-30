@@ -152,4 +152,6 @@ module.exports = {
   setRoomTypeActive,
   deactivateRoomType,
   countRoomsUsingRoomType,
+  listRoomTypesWithRoomCount,
+
 };
