@@ -1,3 +1,5 @@
+// backend/src/modules/kost/sql/stays/stays.sql.js
+// SQL queries related to "stays" in the kost module
 module.exports = {
   createStay: `
     INSERT INTO kost.stays (

@@ -8,6 +8,17 @@
 </footer>
 
 <script src="/js/bootstrap.bundle.min.js"></script>
-
+<script>
+  // Auto-hide flash messages setelah 5 detik
+document.addEventListener('DOMContentLoaded', function() {
+  const alerts = document.querySelectorAll('.alert');
+  alerts.forEach(function(alert) {
+    setTimeout(function() {
+      const bsAlert = new bootstrap.Alert(alert);
+      bsAlert.close();
+    }, 5000);
+  });
+});
+</script>
 </body>
 </html>

@@ -1,4 +1,5 @@
-// modules/kost/sql/rooms/rooms.sql.js
+// src/modules/kost/sql/rooms/rooms.sql.js
+
 module.exports = {
   listRooms: `
     SELECT
@@ -22,18 +23,17 @@ module.exports = {
 
     FROM kost.rooms r
     JOIN kost.room_types rt ON rt.id = r.room_type_id
-      LEFT JOIN kost.stays s
+    LEFT JOIN kost.stays s
       ON s.room_id = r.id
-    AND s.status = 'ACTIVE'
+     AND s.status = 'ACTIVE'
     WHERE ($1::int IS NULL OR r.room_type_id = $1::int)
-
     ORDER BY r.floor, r.code;
   `,
 
-  listRoomTypes: `
-    SELECT id, code, name, base_monthly_price, is_active
-    FROM kost.room_types
-    ORDER BY code;
+  listRoomsForDropdown: `
+    SELECT id, code
+    FROM kost.rooms
+    ORDER BY floor, code;
   `,
 
   getRoomById: `
@@ -96,20 +96,20 @@ module.exports = {
     WHERE id = $1
     RETURNING id;
   `,
-  updateRoomType : `
-  UPDATE kost.rooms
-  SET room_type_id = $2
-  WHERE id = $1
-  RETURNING id, room_type_id;
-`,
 
-deleteRoom: `
-  UPDATE kost.rooms
-  SET status = 'INACTIVE'
-  WHERE id = $1
-  RETURNING id;
-`,
+  updateRoomTypeId: `
+    UPDATE kost.rooms
+    SET room_type_id = $2, updated_at = now()
+    WHERE id = $1
+    RETURNING id, room_type_id;
+  `,
 
+  deleteRoom: `
+    UPDATE kost.rooms
+    SET status = 'INACTIVE', updated_at = now()
+    WHERE id = $1
+    RETURNING id;
+  `,
 
   blockRoom: `
     UPDATE kost.rooms
@@ -125,3 +125,4 @@ deleteRoom: `
     RETURNING id;
   `,
 };
+// ============================================

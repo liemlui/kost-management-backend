@@ -101,7 +101,7 @@ async function updateRoomType(id, payload) {
   } = payload;
 
   const result = await query(
-    sql.rooms.updateRoomType,
+    sql.rooms.updateRoomTypeMaster,
     [
       id,
       code,

@@ -1,62 +1,49 @@
-// modules/kost/repos/rooms/roomAmenity.repo.js
+// src/modules/kost/repos/rooms/roomAmenity.repo.js
 const { query } = require("../../../../db/pool");
 const sql = require("../../sql");
+const { assertPositiveInt } = require("../../../../shared/ids");
 
-/**
- * List amenities attached to a room.
- * Returns rows[].
- */
 async function listRoomAmenities(roomId) {
-    const rid = assertNumberId(roomId, "kost.roomAmenities.listRoomAmenities");
+  const rid = assertPositiveInt(roomId, "kost.roomAmenities.listRoomAmenities");
 
-  const result = await query(
-    sql.rooms.listRoomAmenities,
-    [rid],
-    { label: "kost.roomAmenities.listRoomAmenities" }
-  );
+  const result = await query(sql.rooms.listRoomAmenities, [rid], {
+    label: "kost.roomAmenities.listRoomAmenities",
+  });
+
   return result.rows;
 }
 
-/**
- * List active amenities that are NOT yet attached to a room.
- * Useful for "Add amenity to room" UI.
- * Returns rows[].
- */
 async function listActiveAmenitiesNotInRoom(roomId) {
-  const result = await query(
-    sql.rooms.listActiveAmenitiesNotInRoom,
-    [roomId],
-    { label: "kost.roomAmenities.listActiveAmenitiesNotInRoom" }
+  const rid = assertPositiveInt(
+    roomId,
+    "kost.roomAmenities.listActiveAmenitiesNotInRoom"
   );
+
+  const result = await query(sql.rooms.listActiveAmenitiesNotInRoom, [rid], {
+    label: "kost.roomAmenities.listActiveAmenitiesNotInRoom",
+  });
+
   return result.rows;
 }
 
-function assertNumberId(id, label) {
-  const n = Number(id);
-  if (!Number.isInteger(n) || n <= 0) {
-    const err = new Error(`Invalid id for ${label}: ${id}`);
-    err.status = 400;
-    throw err;
-  }
-  return n;
-}
-
-
-/**
- * Attach an amenity to a room (create mapping).
- * Returns inserted row (at least { id } depending on SQL RETURNING).
- */
 async function insertRoomAmenity(roomId, payload) {
-  const { amenity_id, qty, condition, notes } = payload;
+  const rid = assertPositiveInt(roomId, "kost.roomAmenities.insertRoomAmenity");
+  const aid = assertPositiveInt(
+    payload.amenity_id,
+    "kost.roomAmenities.insertRoomAmenity.amenity_id"
+  );
+
+  const qty = Number(payload.qty);
+  const normalizedQty = Number.isFinite(qty) && qty > 0 ? qty : 1;
 
   const result = await query(
     sql.rooms.insertRoomAmenity,
     [
-      roomId,
-      amenity_id,
-      Number.isFinite(Number(qty)) ? Number(qty) : 1,
-      condition || null,
-      notes || null,
+      rid,
+      aid,
+      normalizedQty,
+      payload.condition || null,
+      payload.notes || null,
     ],
     { label: "kost.roomAmenities.insertRoomAmenity" }
   );
@@ -64,21 +51,24 @@ async function insertRoomAmenity(roomId, payload) {
   return result.rows[0];
 }
 
-/**
- * Update a room amenity mapping row.
- * Returns updated row (or null).
- */
 async function updateRoomAmenity(roomId, roomAmenityId, payload) {
-  const { qty, condition, notes } = payload;
+  const rid = assertPositiveInt(roomId, "kost.roomAmenities.updateRoomAmenity");
+  const raid = assertPositiveInt(
+    roomAmenityId,
+    "kost.roomAmenities.updateRoomAmenity.roomAmenityId"
+  );
+
+  const qty = Number(payload.qty);
+  const normalizedQty = Number.isFinite(qty) && qty > 0 ? qty : 1;
 
   const result = await query(
     sql.rooms.updateRoomAmenity,
     [
-      roomAmenityId,
-      roomId,
-      Number.isFinite(Number(qty)) ? Number(qty) : 1,
-      condition || null,
-      notes || null,
+      raid,
+      rid,
+      normalizedQty,
+      payload.condition || null,
+      payload.notes || null,
     ],
     { label: "kost.roomAmenities.updateRoomAmenity" }
   );
@@ -86,19 +76,16 @@ async function updateRoomAmenity(roomId, roomAmenityId, payload) {
   return result.rows[0] || null;
 }
 
-/**
- * Delete a room amenity mapping row.
- * Returns deleted row (or null) depending on SQL RETURNING.
- */
 async function deleteRoomAmenity(roomId, roomAmenityId) {
-    const rid = assertNumberId(roomId, "kost.roomAmenities.deleteRoomAmenity.roomId");
-  const raid = assertNumberId(roomAmenityId, "kost.roomAmenities.deleteRoomAmenity.roomAmenityId");
-
-  const result = await query(
-    sql.rooms.deleteRoomAmenity,
-    [raid, rid],
-    { label: "kost.roomAmenities.deleteRoomAmenity" }
+  const rid = assertPositiveInt(roomId, "kost.roomAmenities.deleteRoomAmenity");
+  const raid = assertPositiveInt(
+    roomAmenityId,
+    "kost.roomAmenities.deleteRoomAmenity.roomAmenityId"
   );
+
+  const result = await query(sql.rooms.deleteRoomAmenity, [raid, rid], {
+    label: "kost.roomAmenities.deleteRoomAmenity",
+  });
 
   return result.rows[0] || null;
 }

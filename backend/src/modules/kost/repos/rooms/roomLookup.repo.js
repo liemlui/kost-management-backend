@@ -1,13 +1,12 @@
-const { query } = require("../../../../db/pool");
+// src/modules/kost/repos/rooms/roomLookup.repo.js
+const roomRepo = require("./room.repo");
 
+/**
+ * Room lookup for dropdowns/autocomplete.
+ * Query tetap 1 sumber di room.repo.js (no duplication).
+ */
 async function listRoomsForDropdown() {
-  const sql = `
-    SELECT id, code
-    FROM kost.rooms
-    ORDER BY floor, code;
-  `;
-  const { rows } = await query(sql, [], { label: "kost.rooms.listForDropdown" });
-  return rows;
+  return roomRepo.listRoomsForDropdown();
 }
 
 module.exports = { listRoomsForDropdown };

@@ -1,37 +1,23 @@
-// modules/kost/repos/rooms/amenity.repo.js
+// src/modules/kost/repos/rooms/amenity.repo.js
 const { query } = require("../../../../db/pool");
 const sql = require("../../sql");
+const { assertPositiveInt } = require("../../../../shared/ids");
 
-/**
- * List all amenities (admin view).
- * Returns rows[].
- */
 async function listAmenities() {
-  const result = await query(
-    sql.rooms.listAmenities,
-    [],
-    { label: "kost.amenities.listAmenities" }
-  );
+  const result = await query(sql.rooms.listAmenities, [], {
+    label: "kost.amenities.listAmenities",
+  });
   return result.rows;
 }
 
-/**
- * Get single amenity by id.
- * Returns row object or null.
- */
 async function getAmenityById(id) {
-  const result = await query(
-    sql.rooms.getAmenityById,
-    [id],
-    { label: "kost.amenities.getAmenityById" }
-  );
+  const aid = assertPositiveInt(id, "kost.amenities.getAmenityById");
+  const result = await query(sql.rooms.getAmenityById, [aid], {
+    label: "kost.amenities.getAmenityById",
+  });
   return result.rows[0] || null;
 }
 
-/**
- * Insert new amenity.
- * Returns inserted row (at least { id } depending on SQL RETURNING).
- */
 async function insertAmenity(payload) {
   const { code, name, category, unit_label, is_active } = payload;
 
@@ -44,32 +30,24 @@ async function insertAmenity(payload) {
   return result.rows[0];
 }
 
-/**
- * Update amenity.
- * Returns updated row (at least { id } depending on SQL RETURNING).
- */
 async function updateAmenity(id, payload) {
+  const aid = assertPositiveInt(id, "kost.amenities.updateAmenity");
   const { code, name, category, unit_label, is_active } = payload;
 
   const result = await query(
     sql.rooms.updateAmenity,
-    [id, code, name, category, unit_label || null, !!is_active],
+    [aid, code, name, category, unit_label || null, !!is_active],
     { label: "kost.amenities.updateAmenity" }
   );
 
   return result.rows[0] || null;
 }
 
-/**
- * Toggle active state.
- * Returns { id, is_active } if SQL returns it.
- */
 async function toggleAmenityActive(id) {
-  const result = await query(
-    sql.rooms.toggleAmenityActive,
-    [id],
-    { label: "kost.amenities.toggleAmenityActive" }
-  );
+  const aid = assertPositiveInt(id, "kost.amenities.toggleAmenityActive");
+  const result = await query(sql.rooms.toggleAmenityActive, [aid], {
+    label: "kost.amenities.toggleAmenityActive",
+  });
 
   return result.rows[0];
 }

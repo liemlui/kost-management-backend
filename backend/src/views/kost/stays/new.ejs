@@ -1,10 +1,25 @@
 <%- include("../partials/header", { title }) %>
 
+<%
+  // Safe locals: hindari ReferenceError & hindari inline ternary panjang di attribute
+  const _error = (typeof error !== "undefined") ? error : null;
+  const _form  = (typeof form !== "undefined" && form) ? form : {};
+
+  const _rooms = (typeof rooms !== "undefined" && Array.isArray(rooms)) ? rooms : [];
+  const _tenants = (typeof tenants !== "undefined" && Array.isArray(tenants)) ? tenants : [];
+
+  // todayISO fallback: kalau controller lupa kirim
+  const _todayISO = (typeof todayISO !== "undefined" && todayISO)
+    ? todayISO
+    : new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
+%>
+
+
 <h1 class="h3 mb-3">Create Stay</h1>
 
-<% if (error) { %>
+<% if (typeof _error !== "undefined" && _error) { %>
   <div class="alert alert-danger">
-    <strong>Error:</strong> <%= error %>
+    <strong>Error:</strong> <%= _error %>
   </div>
 <% } %>
 
@@ -12,7 +27,7 @@
   // -------------------------
   // Progressive state helpers
   // -------------------------
-  const formData = form || {};
+  const formData = (typeof _form !== "undefined" && _form) ? form : {};
   const hasTenant   = String(formData.tenant_id || "").trim().length > 0;
   const hasRoom     = String(formData.room_id || "").trim().length > 0;
   const hasCheckIn  = String(formData.check_in_at || "").trim().length > 0;
@@ -76,7 +91,7 @@
         data-step="1"
       >
         <option value="">-- Select tenant --</option>
-        <% (tenants || []).forEach(t => { %>
+        <% _tenants.forEach(t => { %>
           <option value="<%= t.id %>" <%= String(formData.tenant_id || "") === String(t.id) ? "selected" : "" %>>
             <%= t.full_name %>
           </option>
@@ -99,7 +114,7 @@
         <%= hasTenant ? "" : "disabled" %>
       >
         <option value="">-- Select room --</option>
-        <% (rooms || []).forEach(r => { %>
+        <% _rooms.forEach(r => { %>
           <option
             value="<%= r.id %>"
             data-room-code="<%= r.room_code %>"
@@ -128,7 +143,7 @@
         name="check_in_at"
         class="form-control"
         required
-        min="<%= todayISO %>"
+        min="<%= (typeof _todayISO !== "undefined" && _todayISO) ? _todayISO : new Date().toLocaleDateString("en-CA") %>"
         value="<%= formData.check_in_at || "" %>"
         data-step="3"
         <%= hasRoom ? "" : "disabled" %>
@@ -553,7 +568,6 @@
   </div>
 </div>
 
-<script src="/js/kost/stays-new.js" defer></script>
 <script src="/js/kost/stays-new.js" defer></script>
 
 <%- include("../partials/footer") %>

@@ -7,8 +7,8 @@
  * - Tidak ada validasi UI
  */
 
-const { query } = require('../../../../db/pool');
-const sql = require('../../sql/stays/stays.sql');
+const { query } = require("../../../../db/pool");
+const sql = require("../../sql/stays/stays.sql");
 
 /**
  * Create new stay
@@ -68,11 +68,7 @@ async function listStaysFiltered(filters = {}) {
     offset,
   ];
 
-  return query(
-    sql.listStaysFiltered,
-    params,
-    'kost.stays.listStaysFiltered'
-  );
+  return query(sql.listStaysFiltered, params, "kost.stays.listStaysFiltered");
 }
 
 async function countStaysFiltered(filters = {}) {
@@ -84,33 +80,21 @@ async function countStaysFiltered(filters = {}) {
     filters.date_to ?? null,
   ];
 
-  return query(
-    sql.countStaysFiltered,
-    params,
-    "kost.stays.countStaysFiltered"
-  );
+  return query(sql.countStaysFiltered, params, "kost.stays.countStaysFiltered");
 }
 
 /**
  * Get single stay (detail page)
  */
 async function getStayById(stayId) {
-  return query(
-    sql.getStayById,
-    [stayId],
-    'kost.stays.getStayById'
-  );
+  return query(sql.getStayById, [stayId], "kost.stays.getStayById");
 }
 
 /**
  * Snapshot stay (audit / before update)
  */
 async function getStaySnapshot(stayId) {
-  return query(
-    sql.getStaySnapshot,
-    [stayId],
-    'kost.stays.getStaySnapshot'
-  );
+  return query(sql.getStaySnapshot, [stayId], "kost.stays.getStaySnapshot");
 }
 
 /**
@@ -119,21 +103,13 @@ async function getStaySnapshot(stayId) {
 async function checkoutStay(stayId, payload) {
   return query(
     sql.checkoutStay,
-    [
-      stayId,
-      payload.check_out_at,
-      payload.physical_check_out_at,
-    ],
-    'kost.stays.checkoutStay'
+    [stayId, payload.check_out_at, payload.physical_check_out_at],
+    "kost.stays.checkoutStay"
   );
 }
 
 async function endStay(stayId, payload) {
-  return query(
-    sql.endStay,
-    [stayId, payload.check_out_at],
-    'kost.stays.endStay'
-  );
+  return query(sql.endStay, [stayId, payload.check_out_at], "kost.stays.endStay");
 }
 
 async function markPhysicalCheckout(stayId, at) {
@@ -148,19 +124,11 @@ async function markPhysicalCheckout(stayId, at) {
  * Dropdown helpers
  */
 async function listAvailableRooms() {
-  return query(
-    sql.listAvailableRooms,
-    [],
-    'kost.stays.listAvailableRooms'
-  );
+  return query(sql.listAvailableRooms, [], "kost.stays.listAvailableRooms");
 }
 
 async function listActiveTenants() {
-  return query(
-    sql.listActiveTenants,
-    [],
-    'kost.stays.listActiveTenants'
-  );
+  return query(sql.listActiveTenants, [], "kost.stays.listActiveTenants");
 }
 
 /**
@@ -170,7 +138,7 @@ async function getRoomPricingContext(roomId) {
   return query(
     sql.getRoomPricingContext,
     [roomId],
-    'kost.stays.getRoomPricingContext'
+    "kost.stays.getRoomPricingContext"
   );
 }
 
@@ -182,7 +150,36 @@ async function forceEndStay(stayId, payload) {
   );
 }
 
+/**
+ * ---------- Canonical aliases (aturan global) ----------
+ * Controller expects:
+ * - listStays({ status, date_from, date_to, tenant_id, room_id, limit, offset })
+ * - listRooms()
+ * - listTenants()
+ */
+async function listStays(filters = {}) {
+  return listStaysFiltered(filters);
+}
+
+async function listRooms(opts = {}) {
+  // controller passes { onlyAvailable: true } from showNew()
+  if (opts?.onlyAvailable) return listAvailableRooms();
+  // default: tetap gunakan query available rooms untuk dropdown.
+  // Kalau kamu punya sql.listRoomsAll nanti bisa ganti di sini.
+  return listAvailableRooms();
+}
+
+async function listTenants() {
+  return listActiveTenants();
+}
+
 module.exports = {
+  // canonical names (aturan global)
+  listStays,
+  listRooms,
+  listTenants,
+
+  // existing exports (biar kompatibel untuk pemanggil lain)
   createStay,
   listStaysFiltered,
   countStaysFiltered,

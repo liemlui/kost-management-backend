@@ -128,7 +128,7 @@ async function showNew(req, res, next) {
     const rooms = roomsRes?.rows || [];
     const tenants = tenantsRes?.rows || [];
 
-    res.render("kost/stays/form", {
+    res.render("kost/stays/new", {
       title: "New Stay",
       mode: "create",
       action: "/admin/kost/stays",
@@ -203,7 +203,7 @@ async function create(req, res, next) {
       const rooms = roomsRes?.rows || [];
       const tenants = tenantsRes?.rows || [];
 
-      return res.status(400).render("kost/stays/form", {
+      return res.status(400).render("kost/stays/new", {
         title: "New Stay",
         mode: "create",
         action: "/admin/kost/stays",

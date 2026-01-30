@@ -1,3 +1,5 @@
+<!-- // backend/src/views/kost/partials/header.ejs -->
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -41,5 +43,21 @@
     </div>
   </div>
 </nav>
-
+<!-- Flash Messages -->
+<% if (flash && flash.type) { %>
+  <div class="container container-narrow mt-3">
+    <div class="alert alert-<%= flash.type === 'danger' ? 'danger' : (flash.type === 'error' ? 'danger' : flash.type) %> alert-dismissible fade show" role="alert">
+      <% if (flash.messages && Array.isArray(flash.messages)) { %>
+        <ul class="mb-0 ps-3">
+          <% flash.messages.forEach(function(message) { %>
+            <li><%= message %></li>
+          <% }) %>
+        </ul>
+      <% } else if (flash.message) { %>
+        <%= flash.message %>
+      <% } %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  </div>
+<% } %>
 <main class="container container-narrow py-4">
