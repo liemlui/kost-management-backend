@@ -3,6 +3,7 @@
 const roomRepo = require("../../repos/rooms/room.repo");
 const roomAmenityRepo = require("../../repos/rooms/roomAmenity.repo");
 const { toIntOrNull, toNullIfEmpty } = require("../../../../shared/parsers");
+const { setFlash } = require("../../../../shared/flash");
 
 // helper kecil: validasi qty
 function toQty(v) {
@@ -11,21 +12,29 @@ function toQty(v) {
   return Math.floor(n);
 }
 
-// (opsional) validasi condition - sesuaikan dengan CHECK/enum schema kamu
 const ALLOWED_CONDITIONS = new Set(["NEW", "GOOD", "FAIR", "DAMAGED", "MISSING"]);
+
+function parseRoomIdOr400(req, res) {
+  const roomId = toIntOrNull(req.params.id);
+  if (!roomId) {
+    res.status(400).send("Invalid room id");
+    return null;
+  }
+  return roomId;
+}
 
 async function manageRoomAmenities(req, res, next) {
   try {
-    const roomId = Number(req.params.id);
-    if (!Number.isInteger(roomId) || roomId <= 0) {
-      return res.status(400).send("Invalid room id");
-    }
+    const roomId = parseRoomIdOr400(req, res);
+    if (!roomId) return;
 
     const room = await roomRepo.getRoomById(roomId);
     if (!room) return res.status(404).send("Room not found");
 
-    const roomAmenities = await roomAmenityRepo.listRoomAmenities(roomId);
-    const picklist = await roomAmenityRepo.listActiveAmenitiesNotInRoom(roomId);
+    const [roomAmenities, picklist] = await Promise.all([
+      roomAmenityRepo.listRoomAmenities(roomId),
+      roomAmenityRepo.listActiveAmenitiesNotInRoom(roomId),
+    ]);
 
     return res.render("kost/rooms/amenities", {
       title: `Manage Amenities — Room ${room.code}`,
@@ -39,12 +48,11 @@ async function manageRoomAmenities(req, res, next) {
   }
 }
 
-
 async function addRoomAmenity(req, res, next) {
   try {
-    const roomId = Number(req.params.id);
+    const roomId = parseRoomIdOr400(req, res);
+    if (!roomId) return;
 
-    // pastikan room ada (biar error FK tidak “misterius”)
     const room = await roomRepo.getRoomById(roomId);
     if (!room) return res.status(404).send("Room not found");
 
@@ -53,15 +61,16 @@ async function addRoomAmenity(req, res, next) {
     const conditionRaw = (req.body.condition || "").trim();
     const condition = conditionRaw ? conditionRaw.toUpperCase() : null;
 
-    if (!Number.isInteger(amenity_id) || amenity_id <= 0) {
+    if (!amenity_id) {
+      await setFlash(req, "error", "Amenity wajib dipilih");
       return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
     }
 
     if (condition && !ALLOWED_CONDITIONS.has(condition)) {
+      await setFlash(req, "error", "Condition tidak valid");
       return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
     }
 
-    // insert (akan kena UNIQUE(room_id, amenity_id) kalau duplicate)
     await roomAmenityRepo.insertRoomAmenity(roomId, {
       amenity_id,
       qty,
@@ -69,6 +78,7 @@ async function addRoomAmenity(req, res, next) {
       notes: toNullIfEmpty(req.body.notes),
     });
 
+    await setFlash(req, "success", "Amenity berhasil ditambahkan");
     return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
   } catch (err) {
     next(err);
@@ -77,21 +87,18 @@ async function addRoomAmenity(req, res, next) {
 
 async function updateRoomAmenity(req, res, next) {
   try {
-    const roomId = Number(req.params.id);
-    const roomAmenityId = toIntOrNull(req.params.roomAmenityId);
+    const roomId = parseRoomIdOr400(req, res);
+    if (!roomId) return;
 
-    if (!Number.isInteger(roomId) || roomId <= 0) {
-      return res.status(400).send("Invalid room id");
-    }
-    if (!Number.isInteger(roomAmenityId) || roomAmenityId <= 0) {
-      return res.status(400).send("Invalid roomAmenityId");
-    }
+    const roomAmenityId = toIntOrNull(req.params.roomAmenityId);
+    if (!roomAmenityId) return res.status(400).send("Invalid roomAmenityId");
 
     const qty = toQty(req.body.qty);
     const conditionRaw = (req.body.condition || "").trim();
     const condition = conditionRaw ? conditionRaw.toUpperCase() : null;
 
     if (condition && !ALLOWED_CONDITIONS.has(condition)) {
+      await setFlash(req, "error", "Condition tidak valid");
       return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
     }
 
@@ -102,21 +109,26 @@ async function updateRoomAmenity(req, res, next) {
     });
 
     if (!updated) return res.status(404).send("Room amenity not found");
+
+    await setFlash(req, "success", "Amenity berhasil diupdate");
     return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
   } catch (err) {
     next(err);
   }
 }
 
-
 async function deleteRoomAmenity(req, res, next) {
   try {
-    const roomId = Number(req.params.id);
+    const roomId = parseRoomIdOr400(req, res);
+    if (!roomId) return;
+
     const roomAmenityId = toIntOrNull(req.params.roomAmenityId);
+    if (!roomAmenityId) return res.status(400).send("Invalid roomAmenityId");
 
     const deleted = await roomAmenityRepo.deleteRoomAmenity(roomId, roomAmenityId);
     if (!deleted) return res.status(404).send("Room amenity not found");
 
+    await setFlash(req, "success", "Amenity berhasil dihapus");
     return res.redirect(`/admin/kost/rooms/${roomId}/amenities`);
   } catch (err) {
     next(err);
