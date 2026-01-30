@@ -1,6 +1,8 @@
 <!-- // backend/src/views/kost/rooms/index.ejs -->
 
-<% const title = "Rooms"; %> <%- include("../partials/header", { title }) %>
+<% const title = "Rooms"; %>
+<%- include("../partials/header", { title }) %>
+<%- include("../partials/helpers") %>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h3 mb-0">Rooms</h1>
@@ -15,7 +17,7 @@
         <select name="room_type_id" class="form-select">
           <option value="">All</option>
           <% (roomTypes || []).forEach(rt => { %>
-            <option value="<%= rt.id %>" <%= (filters && filters.room_type_id === rt.id) ? "selected" : "" %>>
+              <option value="<%= rt.id %>" <%= (filters && String(filters.room_type_id) === String(rt.id)) ? "selected" : "" %>>
               <%= rt.code %> — <%= rt.name %>
             </option>
           <% }) %>
@@ -66,10 +68,8 @@
           <td><%= r.position_zone || "-" %></td>
 
           <td>
-            <% const s = (r.status || "").toUpperCase(); const badgeClass = s
-            === "AVAILABLE" ? "text-bg-success" : s === "MAINTENANCE" ?
-            "text-bg-warning" : "text-bg-secondary"; %>
-            <span class="badge <%= badgeClass %>"><%= s %></span>
+            <% const s = String(r.status || "").toUpperCase(); %>
+            <span class="badge <%= roomStatusBadgeClass(s) %>"><%= s %></span>
           </td>
 
           <td>
@@ -82,9 +82,7 @@
 
           <td><%= r.room_type_code %> — <%= r.room_type_name %></td>
 
-          <td class="text-end">
-            Rp <%= Number(r.base_monthly_price || 0).toLocaleString("id-ID") %>
-          </td>
+          <td class="text-end"><%= fmtIDR(r.base_monthly_price) %></td>
 
           <td>
             <a

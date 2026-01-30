@@ -1,5 +1,7 @@
 // backend/src/views/kost/rooms/detail.ejs
 <%- include('../partials/header', { title }) %>
+<%- include('../partials/helpers') %>
+
 <%
   const _amenities = Array.isArray(roomAmenities) ? roomAmenities : [];
   const hasAC = _amenities.some(a => a.amenity_code === "AC");
@@ -31,7 +33,11 @@
       <ul class="mb-0">
         <li><b>Floor:</b> <%= room.floor %></li>
         <li><b>Zone:</b> <%= room.position_zone || "-" %></li>
-        <li><b>Status:</b> <%= room.status %></li>
+        <li>
+          <b>Status:</b>
+          <% const s = String(room.status || "").toUpperCase(); %>
+          <span class="badge <%= roomStatusBadgeClass(s) %>"><%= s %></span>
+        </li>
         <li><b>Notes:</b> <%= room.notes || "-" %></li>
       </ul>
 
@@ -63,8 +69,9 @@
       <ul class="mb-0">
         <li><b>Type:</b> <%= room.room_type_code %> — <%= room.room_type_name %></li>
         <li><b>Type Active:</b> <%= room.room_type_is_active ? "Yes" : "No" %></li>
-        <li><b>Base Price:</b> Rp <%= Number(room.base_monthly_price||0).toLocaleString("id-ID") %></li>
-        <li><b>Deposit:</b> Rp <%= Number(room.deposit_amount||0).toLocaleString("id-ID") %></li>
+        <li><b>Base Price:</b> <%= fmtIDR(room.base_monthly_price) %></li>
+        <li><b>Deposit:</b> <%= fmtIDR(room.deposit_amount) %></li>
+
         <li><b>Capsule:</b> <%= room.is_capsule ? "Yes" : "No" %></li>
         <li><b>Room Size (m):</b>
           <%= (room.room_width_m != null && room.room_length_m != null)
@@ -167,20 +174,12 @@
             <td><b><%= a.amenity_name %></b> <span class="text-muted">(<%= a.amenity_code %>)</span></td>
             <td class="text-end"><%= a.qty %> <span class="text-muted"><%= a.unit_label || "" %></span></td>
             <td>
-                <% const c = a.condition || ""; %>
-                <% if (!c) { %>
-                    <span class="text-muted">-</span>
-                <% } else if (c === "GOOD" || c === "NEW") { %>
-                    <span class="badge text-bg-success"><%= c %></span>
-                <% } else if (c === "FAIR") { %>
-                    <span class="badge text-bg-warning"><%= c %></span>
-                <% } else if (c === "DAMAGED") { %>
-                    <span class="badge text-bg-warning"><%= c %></span>
-                <% } else if (c === "MISSING") { %>
-                    <span class="badge text-bg-danger"><%= c %></span>
-                <% } else { %>
-                    <span class="badge text-bg-secondary"><%= c %></span>
-                <% } %>
+              <% const c = a.condition || ""; %>
+              <% if (!c) { %>
+                <span class="text-muted">-</span>
+              <% } else { %>
+                <span class="badge <%= amenityConditionBadgeClass(c) %>"><%= c %></span>
+              <% } %>
             </td>
             <td><%= a.notes || "-" %></td>
           </tr>

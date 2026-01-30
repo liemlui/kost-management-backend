@@ -1,0 +1,71 @@
+<%- include("../partials/helpers") %>
+
+<h1 class="h3 mb-3"><%= heading %></h1>
+
+<% if (errors && errors.length) { %>
+  <div class="alert alert-danger">
+    <ul class="mb-0">
+      <% errors.forEach(e => { %><li><%= e %></li><% }) %>
+    </ul>
+  </div>
+<% } %>
+
+<form method="POST" action="<%= action %>" class="card p-3">
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label">Code</label>
+      <input class="form-control mono" name="code" value="<%= form.code %>" required />
+    </div>
+
+    <div class="col-md-5">
+      <label class="form-label">Room Type</label>
+      <select class="form-select" name="room_type_id" required>
+        <option value="">-- select --</option>
+        <% (roomTypes || []).forEach(rt => { %>
+          <option value="<%= rt.id %>" <%= String(form.room_type_id)===String(rt.id) ? "selected" : "" %>>
+            <%= rt.code %> — <%= rt.name %>
+          </option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Floor</label>
+      <select class="form-select" name="floor" required>
+        <% (floorOptions || []).forEach(f => { %>
+          <option value="<%= f %>" <%= Number(form.floor)===Number(f) ? "selected" : "" %>><%= f %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Position Zone</label>
+      <select class="form-select" name="position_zone">
+        <% (zoneOptions || []).forEach(z => { %>
+          <option value="<%= z %>" <%= (form.position_zone || "")===z ? "selected" : "" %>>
+            <%= z === "" ? "-- none --" : z %>
+          </option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Status</label>
+      <select class="form-select" name="status" required>
+        <% (statusOptions || []).forEach(s => { %>
+          <option value="<%= s %>" <%= (form.status || "AVAILABLE")===s ? "selected" : "" %>><%= s %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="col-12">
+      <label class="form-label">Notes</label>
+      <textarea class="form-control" name="notes" rows="3"><%= form.notes || "" %></textarea>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-3">
+    <button class="btn btn-primary" type="submit"><%= submitLabel %></button>
+    <a class="btn btn-outline-secondary" href="<%= cancelHref %>">Cancel</a>
+  </div>
+</form>
