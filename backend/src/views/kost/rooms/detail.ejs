@@ -42,12 +42,14 @@
       <hr />
 
       <div class="d-flex gap-2">
-        <form method="POST" action="/admin/kost/rooms/<%= room.id %>/delete"
-              onsubmit="return confirm('Set room INACTIVE? (akan gagal kalau ada stays)')">
-          <button class="btn btn-sm btn-outline-danger" type="submit">Set INACTIVE</button>
-        </form>
+        <% if (room.status !== "INACTIVE") { %>
+          <form method="POST" action="/admin/kost/rooms/<%= room.id %>/delete"
+                onsubmit="return confirm('Set room INACTIVE? (akan gagal kalau ada stays)')">
+            <button class="btn btn-sm btn-outline-danger" type="submit">Set INACTIVE</button>
+          </form>
+        <% } %>
 
-        <% if (room.status !== "MAINTENANCE") { %>
+        <% if (room.status !== "MAINTENANCE" && room.status !== "INACTIVE") { %>
           <form method="POST" action="/admin/kost/rooms/<%= room.id %>/block">
             <button class="btn btn-sm btn-outline-warning" type="submit">Set MAINTENANCE</button>
           </form>
@@ -58,7 +60,15 @@
             <button class="btn btn-sm btn-outline-success" type="submit">Set AVAILABLE</button>
           </form>
         <% } %>
+
+        <% if (room.status === "INACTIVE") { %>
+          <form method="POST" action="/admin/kost/rooms/<%= room.id %>/activate"
+                onsubmit="return confirm('Activate this room?')">
+            <button class="btn btn-sm btn-outline-success" type="submit">Set ACTIVE</button>
+          </form>
+        <% } %>
       </div>
+
     </div>
   </div>
 

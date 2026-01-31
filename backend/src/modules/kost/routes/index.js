@@ -1,3 +1,4 @@
+// src/modules/kost/routes/index.js
 const express = require("express");
 const router = express.Router();
 
@@ -21,7 +22,7 @@ const inventoryLocationsRoutes = require("./inventory/inventoryLocations.routes"
 const inventoryBalancesRoutes = require("./inventory/inventoryBalances.routes");
 
 // Middleware
-const kostLocals = require("../middlewares/kostLocals.middleware");
+const kostLocals = require("../../../middlewares/kostLocals.middleware");
 
 // Apply kostLocals middleware to all routes in this router
 router.use(kostLocals);

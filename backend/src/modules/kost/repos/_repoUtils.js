@@ -1,5 +1,5 @@
 // src/modules/kost/repos/_repoUtils.js
-const { assertPositiveInt } = require("../../shared/ids");
+const { assertPositiveInt } = require("../../../shared/ids");
 
 function assertId(id, label) {
   return assertPositiveInt(id, label);

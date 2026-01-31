@@ -1,17 +1,13 @@
-// src/modules/kost/middlewares/kostLocals.middleware.js
-const { todayISO_WIB } = require("../../../shared/dates");
-const { getFlash, defaultFlash } = require("../../../shared/flash");
+// src/middlewares/kostLocals.middleware.js
+const { todayISO_WIB } = require("../shared/dates");
 
 module.exports = function kostLocals(req, res, next) {
+  // super clean: module locals only (no flash consumption here)
   res.locals.todayISO = todayISO_WIB();
 
-  // SSOT flash consumption (1 pintu)
-  try {
-    res.locals.flash = getFlash(req);
-  } catch {
-    res.locals.flash = defaultFlash();
+  if (typeof res.locals.title === "undefined") {
+    res.locals.title = "Kost Admin";
   }
 
-  if (typeof res.locals.title === "undefined") res.locals.title = "Kost Admin";
   next();
 };
