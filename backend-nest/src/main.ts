@@ -7,10 +7,13 @@ import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
 import { ENV } from "./config/env";
+import { ErrorHandlerFilter } from "./middlewares/errorHandler.filter";
+
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+    app.useGlobalFilters(new ErrorHandlerFilter());
   app.use(helmet());
 
   app.use(
