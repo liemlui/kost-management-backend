@@ -23,6 +23,7 @@
         "@types/express": "^5.0.6",
         "@types/express-session": "^1.18.2",
         "@types/node": "^25.1.0",
+        "@types/pg": "^8.16.0",
         "ts-node": "^10.9.2",
         "ts-node-dev": "^2.0.0",
         "typescript": "^5.4.5"
