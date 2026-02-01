@@ -1,16 +1,25 @@
 // backend-nest/src/config/logger.ts
+type LogLevel = "info" | "warn" | "error";
 
-type LogLevel = "INFO" | "WARN" | "ERROR";
+type LogPayload = Record<string, unknown>;
 
-function log(level: LogLevel, msg: string, meta?: unknown): void {
+function base(level: LogLevel, action: string, payload?: LogPayload): void {
   const ts = new Date().toISOString();
-  const payload = meta ? ` ${JSON.stringify(meta)}` : "";
-  // eslint-disable-next-line no-console
-  console.log(`[${ts}] [${level}] ${msg}${payload}`);
+  const out = { ts, level, action, ...(payload ?? {}) };
+
+  if (level === "error") console.error(action, out);
+  else if (level === "warn") console.warn(action, out);
+  else console.log(action, out);
 }
 
 export const logger = {
-  info: (msg: string, meta?: unknown) => log("INFO", msg, meta),
-  warn: (msg: string, meta?: unknown) => log("WARN", msg, meta),
-  error: (msg: string, meta?: unknown) => log("ERROR", msg, meta),
-};
+  info(action: string, payload?: LogPayload) {
+    base("info", action, payload);
+  },
+  warn(action: string, payload?: LogPayload) {
+    base("warn", action, payload);
+  },
+  error(action: string, payload?: LogPayload) {
+    base("error", action, payload);
+  },
+} as const;

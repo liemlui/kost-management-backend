@@ -1,39 +1,42 @@
 // backend-nest/src/middlewares/errorHandler.filter.ts
-import { Catch, ExceptionFilter } from "@nestjs/common";
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+} from "@nestjs/common";
 import type { Request, Response } from "express";
 import { logger } from "../config/logger";
 
-type SessionLike = {
-  flash?: unknown;
-};
+function getStatusFromUnknown(err: unknown, res: Response): number {
+  if (err instanceof HttpException) return err.getStatus();
 
-type ReqWithSession = Request & {
-  session?: SessionLike;
-  sessionID?: string;
-};
-
-function safeSubSessionId(id: unknown): string | null {
-  if (!id) return null;
-  const s = String(id);
-  return s.length > 10 ? s.substring(0, 10) + "..." : s;
+  const anyErr = err as any;
+  return (
+    anyErr?.status ||
+    anyErr?.statusCode ||
+    res.statusCode ||
+    500
+  );
 }
 
 @Catch()
 export class ErrorHandlerFilter implements ExceptionFilter {
-  catch(err: unknown, host: any) {
+  catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
-    const req = ctx.getRequest<ReqWithSession>();
+    const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();
 
-    // Determine status similar to legacy
-    const anyErr = err as any;
-    const status =
-      (typeof anyErr?.status === "number" && anyErr.status) ||
-      (typeof anyErr?.statusCode === "number" && anyErr.statusCode) ||
-      (typeof res.statusCode === "number" && res.statusCode >= 400 ? res.statusCode : 500);
+    const status = getStatusFromUnknown(exception, res);
 
-    const message = (anyErr?.message && String(anyErr.message)) || "Unknown error";
-    const stack = anyErr?.stack ? String(anyErr.stack) : null;
+    const anyErr = exception as any;
+    const message =
+      (exception instanceof HttpException
+        ? exception.message
+        : anyErr?.message) || "Unknown error";
+
+    const stack: string | null =
+      process.env.NODE_ENV === "production" ? null : (anyErr?.stack ?? null);
 
     logger.error("http.error", {
       method: req.method,
@@ -41,25 +44,23 @@ export class ErrorHandlerFilter implements ExceptionFilter {
       message,
       status,
       stack,
-      sessionId: safeSubSessionId(req.sessionID),
-      sessionHasFlash: !!req.session?.flash,
-      requestId: (req.headers["x-request-id"] as string | undefined) || null,
+      sessionId: req.sessionID ? String(req.sessionID).slice(0, 10) + "..." : null,
+      sessionHasFlash: !!(req.session as any)?.flash,
+      requestId: req.headers["x-request-id"] ?? null,
     });
 
-    // dont render if headers already sent
+    // kalau response sudah mulai dikirim, jangan render lagi
     if (res.headersSent) return;
 
     res.status(status);
 
-    // SSOT: variables used by error.ejs
-    // NOTE: keep keys aligned with legacy error handler
     return res.render("error", {
       title: "Error",
       status,
       path: req.originalUrl || req.path,
-      requestId: (req.headers["x-request-id"] as string | undefined) || null,
+      requestId: req.headers["x-request-id"] || null,
       message,
-      stack: process.env.NODE_ENV === "production" ? null : stack,
+      stack,
     });
   }
 }
