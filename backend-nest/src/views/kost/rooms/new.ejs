@@ -1,0 +1,16 @@
+<%- include("../partials/header", { title }) %>
+
+<%- include("./_form", {
+  heading: "New Room",
+  action: "/admin/kost/rooms",
+  submitLabel: "Create",
+  cancelHref: "/admin/kost/rooms",
+  errors,
+  form,
+  roomTypes,
+  floorOptions,
+  zoneOptions,
+  statusOptions
+}) %>
+
+<%- include("../partials/footer") %>

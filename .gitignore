@@ -34,3 +34,6 @@ build/
 # Logs
 logs/
 *.log
+
+backend-nest/.env
+backend-nest/dist

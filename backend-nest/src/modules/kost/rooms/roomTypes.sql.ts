@@ -14,8 +14,7 @@ export const roomTypesSql = {
       rt.updated_at,
       COUNT(r.id)::int AS rooms_count
     FROM kost.room_types rt
-    LEFT JOIN kost.rooms r
-      ON r.room_type_id = rt.id
+    LEFT JOIN kost.rooms r ON r.room_type_id = rt.id
     GROUP BY rt.id
     ORDER BY rt.code ASC;
   `,

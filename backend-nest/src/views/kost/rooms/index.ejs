@@ -1,0 +1,105 @@
+<!-- // backend/src/views/kost/rooms/index.ejs -->
+
+<%- include("../partials/header", { title }) %>
+<%- include("../partials/helpers") %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Rooms</h1>
+  <a class="btn btn-primary" href="/admin/kost/rooms/new">+ New Room</a>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <form method="GET" action="/admin/kost/rooms" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label mb-1">Room Type</label>
+        <select name="room_type_id" class="form-select">
+          <option value="">All</option>
+          <% (roomTypes || []).forEach(rt => { %>
+              <option value="<%= rt.id %>" <%= (filters && String(filters.room_type_id) === String(rt.id)) ? "selected" : "" %>>
+              <%= rt.code %> — <%= rt.name %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="/admin/kost/rooms" class="btn btn-outline-secondary">Clear</a>
+      </div>
+
+      <% if (filters && filters.room_type_id) { %>
+        <div class="col-md-5 text-muted small">
+          Filter aktif: room_type_id = <%= filters.room_type_id %>
+        </div>
+      <% } %>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-striped table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 70px">ID</th>
+          <th>Code</th>
+          <th style="width: 90px">Floor</th>
+          <th style="width: 120px">Zone</th>
+          <th style="width: 140px">Status</th>
+          <th style="width: 120px">Occupied</th>
+          <th>Room Type</th>
+          <th class="text-end" style="width: 180px">Base Price</th>
+          <th style="width: 160px">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <% if (!rooms || rooms.length === 0) { %>
+        <tr>
+          <td colspan="9" class="text-muted">No rooms yet.</td>
+        </tr>
+        <% } %> <% (rooms || []).forEach((r) => { %>
+        <tr>
+          <td><%= r.id %></td>
+          <td class="fw-semibold mono"><%= r.code %></td>
+          <td><%= r.floor %></td>
+          <td><%= r.position_zone || "-" %></td>
+
+          <td>
+            <% const s = String(r.status || "").toUpperCase(); %>
+            <span class="badge <%= roomStatusBadgeClass(s) %>"><%= s %></span>
+          </td>
+
+          <td>
+            <% if (r.is_occupied) { %>
+            <span class="badge text-bg-danger">OCCUPIED</span>
+            <% } else { %>
+            <span class="badge text-bg-success">VACANT</span>
+            <% } %>
+          </td>
+
+          <td><%= r.room_type_code %> — <%= r.room_type_name %></td>
+
+          <td class="text-end"><%= fmtIDR(r.base_monthly_price) %></td>
+
+          <td>
+            <a
+              class="btn btn-sm btn-outline-primary"
+              href="/admin/kost/rooms/<%= r.id %>"
+              >Detail</a
+            >
+            <a
+              class="btn btn-sm btn-outline-secondary"
+              href="/admin/kost/rooms/<%= r.id %>/edit"
+              >Edit</a
+            >
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include("../partials/footer") %>

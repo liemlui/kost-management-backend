@@ -1,4 +1,6 @@
-import { Pool, QueryResult } from "pg";
+// pwe/backend-nest/src/db/pool.ts
+
+import { Pool, QueryResult, QueryResultRow } from "pg";
 // @ts-ignore - Types for pg module
 import { ENV } from "../config/env";
 
@@ -15,7 +17,7 @@ pool.on("error", (err) => {
   });
 });
 
-export async function query<T = any>(
+export async function query<T extends QueryResultRow = any>(
   text: string,
   params?: any[]
 ): Promise<QueryResult<T>> {

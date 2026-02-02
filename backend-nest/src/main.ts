@@ -8,6 +8,7 @@ import { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
 import { ENV } from "./config/env";
 import { ErrorHandlerFilter } from "./middlewares/errorHandler.filter";
+import * as path from "path";
 
 
 async function bootstrap() {
@@ -27,9 +28,16 @@ async function bootstrap() {
   );
 
   // Views & static
-  app.useStaticAssets(path.join(__dirname, "..", "src", "public"));
-  app.setBaseViewsDir(path.join(__dirname, "..", "src", "views"));
-  app.setViewEngine("ejs");
+const isProd = process.env.NODE_ENV === "production";
+const rootDir = process.cwd();
+
+const viewsDir = path.join(rootDir, isProd ? "dist/views" : "src/views");
+const publicDir = path.join(rootDir, isProd ? "dist/public" : "src/public");
+
+// Views & static
+app.useStaticAssets(publicDir);
+app.setBaseViewsDir(viewsDir);
+app.setViewEngine("ejs");
 
   const port = ENV.PORT || 3000;
   await app.listen(port);
