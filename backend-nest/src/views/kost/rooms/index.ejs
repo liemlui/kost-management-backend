@@ -1,7 +1,6 @@
-<!-- // backend/src/views/kost/rooms/index.ejs -->
+<!-- // /src/views/kost/rooms/index.ejs -->
 
 <%- include("../partials/header", { title }) %>
-<%- include("../partials/helpers") %>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1 class="h3 mb-0">Rooms</h1>
@@ -16,7 +15,7 @@
         <select name="room_type_id" class="form-select">
           <option value="">All</option>
           <% (roomTypes || []).forEach(rt => { %>
-              <option value="<%= rt.id %>" <%= (filters && String(filters.room_type_id) === String(rt.id)) ? "selected" : "" %>>
+            <option value="<%= rt.id %>" <%= (filters && String(filters.room_type_id) === String(rt.id)) ? "selected" : "" %>>
               <%= rt.code %> — <%= rt.name %>
             </option>
           <% }) %>
@@ -56,46 +55,39 @@
 
       <tbody>
         <% if (!rooms || rooms.length === 0) { %>
-        <tr>
-          <td colspan="9" class="text-muted">No rooms yet.</td>
-        </tr>
-        <% } %> <% (rooms || []).forEach((r) => { %>
-        <tr>
-          <td><%= r.id %></td>
-          <td class="fw-semibold mono"><%= r.code %></td>
-          <td><%= r.floor %></td>
-          <td><%= r.position_zone || "-" %></td>
+          <tr>
+            <td colspan="9" class="text-muted">No rooms yet.</td>
+          </tr>
+        <% } %>
 
-          <td>
-            <% const s = String(r.status || "").toUpperCase(); %>
-            <span class="badge <%= roomStatusBadgeClass(s) %>"><%= s %></span>
-          </td>
+        <% (rooms || []).forEach((r) => { %>
+          <tr>
+            <td><%= r.id %></td>
+            <td class="fw-semibold mono"><%= r.code %></td>
+            <td><%= r.floor %></td>
+            <td><%= r.position_zone || "-" %></td>
 
-          <td>
-            <% if (r.is_occupied) { %>
-            <span class="badge text-bg-danger">OCCUPIED</span>
-            <% } else { %>
-            <span class="badge text-bg-success">VACANT</span>
-            <% } %>
-          </td>
+            <td>
+              <span class="badge <%= r.status_badge_class %>"><%= r.status_text %></span>
+            </td>
 
-          <td><%= r.room_type_code %> — <%= r.room_type_name %></td>
+            <td>
+              <% if (r.is_occupied) { %>
+                <span class="badge text-bg-danger">OCCUPIED</span>
+              <% } else { %>
+                <span class="badge text-bg-success">VACANT</span>
+              <% } %>
+            </td>
 
-          <td class="text-end"><%= fmtIDR(r.base_monthly_price) %></td>
+            <td><%= r.room_type_code %> — <%= r.room_type_name %></td>
 
-          <td>
-            <a
-              class="btn btn-sm btn-outline-primary"
-              href="/admin/kost/rooms/<%= r.id %>"
-              >Detail</a
-            >
-            <a
-              class="btn btn-sm btn-outline-secondary"
-              href="/admin/kost/rooms/<%= r.id %>/edit"
-              >Edit</a
-            >
-          </td>
-        </tr>
+            <td class="text-end"><%= r.base_monthly_price_text %></td>
+
+            <td>
+              <a class="btn btn-sm btn-outline-primary" href="/admin/kost/rooms/<%= r.id %>">Detail</a>
+              <a class="btn btn-sm btn-outline-secondary" href="/admin/kost/rooms/<%= r.id %>/edit">Edit</a>
+            </td>
+          </tr>
         <% }) %>
       </tbody>
     </table>

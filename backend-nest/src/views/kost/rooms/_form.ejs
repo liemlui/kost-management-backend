@@ -1,9 +1,7 @@
 <!-- // kost/rooms/_form.ejs -->
 
-<%- include("../partials/helpers") %>
-
 <%
-  // super clean: prefer flash.form for repopulate after redirect
+  // prefer flash.form for repopulate after redirect
   const f = (flash && flash.form) ? flash.form : (form || {});
   const _hasFlashErrors = flash && Array.isArray(flash.errors) && flash.errors.length > 0;
 %>

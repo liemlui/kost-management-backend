@@ -8,7 +8,6 @@ import { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
 import { ENV } from "./config/env";
 import { ErrorHandlerFilter } from "./middlewares/errorHandler.filter";
-import * as path from "path";
 
 
 async function bootstrap() {
