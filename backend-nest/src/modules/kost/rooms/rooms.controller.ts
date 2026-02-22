@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import { RoomsRepo, type RoomPayload, type RoomStatus } from "./rooms.repo";
 import { RoomTypesRepo } from "./roomTypes.repo";
 import { RoomAmenitiesRepo } from "./roomAmenities.repo";
-import { optionalInt, optionalSelectInt, optionalString } from "../../../shared/parsers";
+import { optionalInt, optionalSelectInt } from "../../../shared/parsers";
 import { logger } from "../../../config/logger";
 import { getFlash, setFlash } from "../../../shared/flash";
 import {
@@ -17,24 +17,39 @@ const FLOOR_OPTIONS = [1, 2] as const;
 const ZONE_OPTIONS = ["", "FRONT", "MIDDLE", "BACK"] as const;
 const STATUS_OPTIONS = ["AVAILABLE", "MAINTENANCE", "INACTIVE"] as const;
 
+type ReqWithSession = Request & {
+  sessionID?: string;
+  session?: { flash?: unknown };
+};
+
 type RoomFormShape = {
   code: string;
   room_type_id: number | null;
   floor: number | null;
-  position_zone: string | null;
+  position_zone: string | null; // null or FRONT/MIDDLE/BACK
   status: RoomStatus;
   notes: string | null;
 };
 
+function asObj(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+}
+
+function toNullIfEmptyString(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s ? s : null;
+}
+
 function normalizeRoomPayload(body: unknown): RoomFormShape {
-  const b = (body && typeof body === "object") ? (body as Record<string, unknown>) : {};
+  const b = asObj(body);
 
   const code = String(b.code ?? "").trim();
   const room_type_id = optionalSelectInt(b.room_type_id, { min: 1 });
   const floor = optionalInt(b.floor, { min: 1 });
-  const position_zone = optionalString(b.position_zone);
+  const position_zone = toNullIfEmptyString(b.position_zone); // ✅ parity with legacy toNullIfEmpty
   const status = String(b.status ?? "AVAILABLE").trim() as RoomStatus;
-  const notes = optionalString(b.notes);
+  const notes = toNullIfEmptyString(b.notes);
 
   return { code, room_type_id, floor, position_zone, status, notes };
 }
@@ -44,19 +59,34 @@ function validateRoomPayload(p: RoomFormShape): string[] {
   if (!p.code) errors.push("Code wajib diisi.");
   if (!p.room_type_id || Number.isNaN(p.room_type_id)) errors.push("Room type wajib dipilih.");
   if (!p.floor || !(FLOOR_OPTIONS as readonly number[]).includes(p.floor)) errors.push("Floor hanya boleh 1 atau 2.");
-  if (p.position_zone && !(ZONE_OPTIONS as readonly string[]).includes(p.position_zone))
+
+  if (p.position_zone && !(ZONE_OPTIONS as readonly string[]).includes(p.position_zone)) {
     errors.push("Position zone tidak valid.");
+  }
+
   if (!(STATUS_OPTIONS as readonly string[]).includes(p.status)) errors.push("Status tidak valid.");
   return errors;
 }
 
 function parseIdOr400(req: Request, res: Response): number | null {
-  const id = optionalInt((req.params as any)?.id, { min: 1 });
+  const id = optionalInt(req.params?.id, { min: 1 });
   if (!id) {
     res.status(400).send("Invalid id");
     return null;
   }
   return id;
+}
+
+function getErrCode(err: unknown): string | null {
+  if (!err || typeof err !== "object") return null;
+  const e = err as Record<string, unknown>;
+  return typeof e.code === "string" ? e.code : null;
+}
+
+function getErrMessage(err: unknown): string | null {
+  if (!err || typeof err !== "object") return null;
+  const e = err as Record<string, unknown>;
+  return typeof e.message === "string" ? e.message : null;
 }
 
 @Controller("admin/kost/rooms")
@@ -68,25 +98,31 @@ export class RoomsController {
   ) {}
 
   @Get("/")
-  async index(@Req() req: Request, @Res() res: Response, @Query("room_type_id") roomTypeIdQ?: string) {
-    res.locals.flash = getFlash(req as any);
+  async index(
+    @Req() req: ReqWithSession,
+    @Res() res: Response,
+    @Query("room_type_id") roomTypeIdQ?: string,
+  ) {
+    res.locals.flash = getFlash(req);
 
     const roomTypeId = optionalInt(roomTypeIdQ, { min: 1 });
+
     const [rooms, roomTypes] = await Promise.all([
       this.roomsRepo.listRooms(roomTypeId),
       this.roomTypesRepo.listActiveRoomTypes(),
     ]);
 
-    const roomsVM = (rooms || []).map((r: any) => {
-      const statusText = String(r?.status || "").toUpperCase();
+    const roomsVM = (rooms || []).map((row) => {
+      const r = asObj(row);
+      const statusText = String(r.status ?? "").toUpperCase();
       return {
         ...r,
         status_text: statusText,
         status_badge_class: roomStatusBadgeClass(statusText),
-        base_monthly_price_text: fmtIDR((r as any)?.base_monthly_price),
-        deposit_amount_text: fmtIDR((r as any)?.deposit_amount),
-        created_at_text: fmtDateISO((r as any)?.created_at),
-        updated_at_text: fmtDateISO((r as any)?.updated_at),
+        base_monthly_price_text: fmtIDR(r.base_monthly_price),
+        deposit_amount_text: fmtIDR(r.deposit_amount),
+        created_at_text: fmtDateISO(r.created_at),
+        updated_at_text: fmtDateISO(r.updated_at),
       };
     });
 
@@ -99,10 +135,11 @@ export class RoomsController {
   }
 
   @Get("/new")
-  async showNew(@Req() req: Request, @Res() res: Response) {
-    res.locals.flash = getFlash(req as any);
+  async showNew(@Req() req: ReqWithSession, @Res() res: Response) {
+    res.locals.flash = getFlash(req);
 
     const roomTypes = await this.roomTypesRepo.listActiveRoomTypes();
+
     return res.render("kost/rooms/new", {
       title: "New Room",
       roomTypes,
@@ -115,7 +152,7 @@ export class RoomsController {
   }
 
   @Post("/")
-  async create(@Req() req: any, @Res() res: Response, @Body() body: unknown) {
+  async create(@Req() req: ReqWithSession, @Res() res: Response, @Body() body: unknown) {
     logger.info("rooms.create.start", {
       sessionId: req.sessionID ? String(req.sessionID).slice(0, 10) + "..." : null,
     });
@@ -124,15 +161,18 @@ export class RoomsController {
     const errors = validateRoomPayload(payload0);
     const roomTypes = await this.roomTypesRepo.listActiveRoomTypes();
 
+    // legacy: setFlashErrors + render
     if (errors.length) {
-      await setFlash(req, "error", errors.join(" "), payload0 as any);
+      await setFlash(req, "error", errors.join(" "), payload0 as unknown);
+      const b = asObj(body);
+
       return res.status(400).render("kost/rooms/new", {
         title: "New Room",
         roomTypes,
         floorOptions: FLOOR_OPTIONS,
         zoneOptions: ZONE_OPTIONS,
         statusOptions: STATUS_OPTIONS,
-        form: { ...payload0, room_type_id: (body as any)?.room_type_id ?? "" },
+        form: { ...payload0, room_type_id: (b.room_type_id ?? "") as unknown },
         errors,
       });
     }
@@ -141,7 +181,7 @@ export class RoomsController {
       code: payload0.code,
       room_type_id: payload0.room_type_id!,
       floor: payload0.floor as 1 | 2,
-      position_zone: (payload0.position_zone as any) ?? null,
+      position_zone: payload0.position_zone,
       status: payload0.status,
       notes: payload0.notes,
     };
@@ -149,33 +189,44 @@ export class RoomsController {
     try {
       const inserted = await this.roomsRepo.insertRoom(payload);
       const newId = inserted?.id;
-      if (!newId) throw Object.assign(new Error("Insert room succeeded but no id returned."), { status: 500 });
+
+      if (!newId) {
+        const e = new Error("Insert room succeeded but no id returned.");
+        (e as unknown as Record<string, unknown>).status = 500;
+        throw e;
+      }
 
       logger.info("rooms.create.success", { roomId: newId, code: payload.code });
       await setFlash(req, "success", `Room "${payload.code}" berhasil dibuat`);
       return res.redirect(`/admin/kost/rooms/${newId}`);
-    } catch (err: any) {
-      logger.error("rooms.create.error", { error: err?.message, code: err?.code });
+    } catch (err: unknown) {
+      logger.error("rooms.create.error", {
+        error: getErrMessage(err),
+        code: getErrCode(err),
+        sessionId: req.sessionID ? String(req.sessionID).slice(0, 10) + "..." : null,
+      });
 
-      if (err?.code === "23505") {
+      if (getErrCode(err) === "23505") {
         const msg = "Room code sudah dipakai (harus unique).";
-        await setFlash(req, "error", msg, (body as any) ?? null);
+        await setFlash(req, "error", msg, body);
+
         return res.status(400).render("kost/rooms/new", {
           title: "New Room",
           roomTypes,
           floorOptions: FLOOR_OPTIONS,
           zoneOptions: ZONE_OPTIONS,
           statusOptions: STATUS_OPTIONS,
-          form: (body as any) ?? {},
+          form: asObj(body),
           errors: [msg],
         });
       }
+
       throw err;
     }
   }
 
   @Get("/:id")
-  async detail(@Req() req: any, @Res() res: Response, @Param("id") _id: string, @Query() query: any) {
+  async detail(@Req() req: ReqWithSession, @Res() res: Response, @Param("id") _id: string, @Query() query: unknown) {
     res.locals.flash = getFlash(req);
 
     const id = parseIdOr400(req, res);
@@ -192,22 +243,29 @@ export class RoomsController {
       this.roomTypesRepo.listRoomTypes(),
     ]);
 
-    const hasAC = !!(room as any).has_ac || (roomAmenities || []).some((a: any) => a.amenity_code === "AC");
-    const hasFAN = !!(room as any).has_fan || (roomAmenities || []).some((a: any) => a.amenity_code === "FAN");
+    const roomObj = asObj(room);
 
-    const statusText = String((room as any)?.status || "").toUpperCase();
+    // legacy parity: compute in controller
+    const hasAC =
+      !!roomObj.has_ac || (Array.isArray(roomAmenities) && roomAmenities.some((a) => asObj(a).amenity_code === "AC"));
+
+    const hasFAN =
+      !!roomObj.has_fan || (Array.isArray(roomAmenities) && roomAmenities.some((a) => asObj(a).amenity_code === "FAN"));
+
+    const statusText = String(roomObj.status ?? "").toUpperCase();
     const roomVM = {
-      ...room,
+      ...roomObj,
       status_text: statusText,
       status_badge_class: roomStatusBadgeClass(statusText),
-      base_monthly_price_text: fmtIDR((room as any)?.base_monthly_price),
-      deposit_amount_text: fmtIDR((room as any)?.deposit_amount),
-      created_at_text: fmtDateISO((room as any)?.created_at),
-      updated_at_text: fmtDateISO((room as any)?.updated_at),
+      base_monthly_price_text: fmtIDR(roomObj.base_monthly_price),
+      deposit_amount_text: fmtIDR(roomObj.deposit_amount),
+      created_at_text: fmtDateISO(roomObj.created_at),
+      updated_at_text: fmtDateISO(roomObj.updated_at),
     };
 
-    const roomAmenitiesVM = (roomAmenities || []).map((a: any) => {
-      const conditionText = String(a?.condition || "").toUpperCase();
+    const roomAmenitiesVM = (roomAmenities || []).map((row) => {
+      const a = asObj(row);
+      const conditionText = String(a.condition ?? "").toUpperCase();
       return {
         ...a,
         condition_text: conditionText,
@@ -215,13 +273,16 @@ export class RoomsController {
       };
     });
 
-    const roomTypesVM = (roomTypes || []).map((rt: any) => ({
-      ...rt,
-      base_monthly_price_text: fmtIDR((rt as any)?.base_monthly_price),
-    }));
+    const roomTypesVM = (roomTypes || []).map((row) => {
+      const rt = asObj(row);
+      return {
+        ...rt,
+        base_monthly_price_text: fmtIDR(rt.base_monthly_price),
+      };
+    });
 
     return res.render("kost/rooms/detail", {
-      title: `Room ${(room as any).code}`,
+      title: `Room ${String(roomObj.code ?? "")}`,
       room: roomVM,
       roomAmenities: roomAmenitiesVM,
       roomTypes: roomTypesVM,
@@ -232,7 +293,7 @@ export class RoomsController {
   }
 
   @Get("/:id/edit")
-  async showEdit(@Req() req: any, @Res() res: Response) {
+  async showEdit(@Req() req: ReqWithSession, @Res() res: Response) {
     res.locals.flash = getFlash(req);
 
     const id = parseIdOr400(req, res);
@@ -249,19 +310,21 @@ export class RoomsController {
       return res.redirect("/admin/kost/rooms");
     }
 
+    const r = asObj(room);
+
     return res.render("kost/rooms/edit", {
-      title: `Edit Room ${(room as any).code}`,
+      title: `Edit Room ${String(r.code ?? "")}`,
       roomTypes,
       floorOptions: FLOOR_OPTIONS,
       zoneOptions: ZONE_OPTIONS,
       statusOptions: STATUS_OPTIONS,
       form: {
-        code: (room as any).code,
-        room_type_id: (room as any).room_type_id,
-        floor: (room as any).floor,
-        position_zone: (room as any).position_zone ?? "",
-        status: (room as any).status,
-        notes: (room as any).notes ?? "",
+        code: String(r.code ?? ""),
+        room_type_id: r.room_type_id as unknown,
+        floor: r.floor as unknown,
+        position_zone: (r.position_zone ?? "") as unknown,
+        status: (r.status ?? "AVAILABLE") as unknown,
+        notes: (r.notes ?? "") as unknown,
       },
       roomId: id,
       roomAmenities,
@@ -270,24 +333,27 @@ export class RoomsController {
   }
 
   @Post("/:id")
-  async update(@Req() req: any, @Res() res: Response, @Body() body: unknown) {
+  async update(@Req() req: ReqWithSession, @Res() res: Response, @Body() body: unknown) {
     const id = parseIdOr400(req, res);
     if (!id) return;
 
     const payload0 = normalizeRoomPayload(body);
     const errors = validateRoomPayload(payload0);
+
     const roomTypes = await this.roomTypesRepo.listActiveRoomTypes();
     const roomAmenities = await this.roomAmenitiesRepo.listRoomAmenities(id);
 
     if (errors.length) {
-      await setFlash(req, "error", errors.join(" "), payload0 as any);
+      await setFlash(req, "error", errors.join(" "), payload0 as unknown);
+      const b = asObj(body);
+
       return res.status(400).render("kost/rooms/edit", {
         title: `Edit Room ${payload0.code || id}`,
         roomTypes,
         floorOptions: FLOOR_OPTIONS,
         zoneOptions: ZONE_OPTIONS,
         statusOptions: STATUS_OPTIONS,
-        form: { ...payload0, room_type_id: (body as any)?.room_type_id ?? "" },
+        form: { ...payload0, room_type_id: (b.room_type_id ?? "") as unknown },
         roomId: id,
         roomAmenities,
         errors,
@@ -298,7 +364,7 @@ export class RoomsController {
       code: payload0.code,
       room_type_id: payload0.room_type_id!,
       floor: payload0.floor as 1 | 2,
-      position_zone: (payload0.position_zone as any) ?? null,
+      position_zone: payload0.position_zone,
       status: payload0.status,
       notes: payload0.notes,
     };
@@ -307,17 +373,18 @@ export class RoomsController {
       await this.roomsRepo.updateRoom(id, payload);
       await setFlash(req, "success", "Room berhasil diupdate");
       return res.redirect(`/admin/kost/rooms/${id}`);
-    } catch (err: any) {
-      if (err?.code === "23505") {
+    } catch (err: unknown) {
+      if (getErrCode(err) === "23505") {
         const msg = "Room code sudah dipakai (harus unique).";
-        await setFlash(req, "error", msg, (body as any) ?? null);
+        await setFlash(req, "error", msg, body);
+
         return res.status(400).render("kost/rooms/edit", {
           title: "Edit Room",
           roomTypes,
           floorOptions: FLOOR_OPTIONS,
           zoneOptions: ZONE_OPTIONS,
           statusOptions: STATUS_OPTIONS,
-          form: (body as any) ?? {},
+          form: asObj(body),
           roomId: id,
           roomAmenities,
           errors: [msg],
@@ -328,16 +395,17 @@ export class RoomsController {
   }
 
   @Post("/:id/delete")
-  async remove(@Req() req: any, @Res() res: Response) {
+  async remove(@Req() req: ReqWithSession, @Res() res: Response) {
     const id = parseIdOr400(req, res);
     if (!id) return;
 
     try {
+      // legacy: roomRepo.deleteRoom(id) which means "INACTIVE" (soft)
       await this.roomsRepo.setInactive(id);
       await setFlash(req, "success", "Room di-INACTIVE-kan");
       return res.redirect("/admin/kost/rooms");
-    } catch (err: any) {
-      if (err?.code === "23503") {
+    } catch (err: unknown) {
+      if (getErrCode(err) === "23503") {
         await setFlash(req, "error", "Tidak bisa menghapus room yang sedang dipakai");
         return res.status(409).send(
           "Tidak bisa delete room karena sudah dipakai oleh data lain (mis. stays). Solusi: set status menjadi INACTIVE.",
@@ -348,7 +416,7 @@ export class RoomsController {
   }
 
   @Post("/:id/activate")
-  async activate(@Req() req: any, @Res() res: Response) {
+  async activate(@Req() req: ReqWithSession, @Res() res: Response) {
     const id = parseIdOr400(req, res);
     if (!id) return;
 
@@ -358,7 +426,7 @@ export class RoomsController {
   }
 
   @Post("/:id/block")
-  async block(@Req() req: any, @Res() res: Response) {
+  async block(@Req() req: ReqWithSession, @Res() res: Response) {
     const id = parseIdOr400(req, res);
     if (!id) return;
 
@@ -368,7 +436,7 @@ export class RoomsController {
   }
 
   @Post("/:id/unblock")
-  async unblock(@Req() req: any, @Res() res: Response) {
+  async unblock(@Req() req: ReqWithSession, @Res() res: Response) {
     const id = parseIdOr400(req, res);
     if (!id) return;
 
@@ -378,11 +446,11 @@ export class RoomsController {
   }
 
   @Post("/:id/change-type")
-  async changeRoomType(@Req() req: any, @Res() res: Response, @Body() body: unknown) {
+  async changeRoomType(@Req() req: ReqWithSession, @Res() res: Response, @Body() body: unknown) {
     const roomId = parseIdOr400(req, res);
     if (!roomId) return;
 
-    const b = (body && typeof body === "object") ? (body as Record<string, unknown>) : {};
+    const b = asObj(body);
     const roomTypeId = optionalSelectInt(b.room_type_id, { min: 1 });
 
     if (!roomTypeId) {

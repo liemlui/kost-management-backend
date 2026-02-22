@@ -73,7 +73,6 @@ export function normalizeFlash(raw: unknown): FlashState {
   if (isRecord(raw)) {
     const r = raw as RawFlashLike;
 
-    // if it looks like new contract (any known keys exist)
     const hasNewKeys =
       "success" in r || "error" in r || "info" in r || "warnings" in r || "errors" in r || "form" in r;
 
@@ -103,7 +102,7 @@ export function normalizeFlash(raw: unknown): FlashState {
 
     // legacy errors: { type, messages: [...] }
     const legacyMany = raw as LegacyFlashMany;
-    const msgs = isRecord(raw) ? (raw as any).messages : undefined;
+    const msgs = legacyMany.messages;
     if (Array.isArray(msgs)) {
       f.errors = toStrArray(msgs);
       return f;
@@ -160,10 +159,6 @@ export async function setFlashErrors(
   await saveSession(req);
 }
 
-/**
- * Pop flash (read once) and clear from session.
- * Controllers call this before render.
- */
 export function getFlash(req: ReqWithSession): FlashState {
   if (!req.session) return defaultFlash();
 

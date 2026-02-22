@@ -132,3 +132,151 @@ When starting a new chat, say:
 > Kita lanjut dari shared/parsers.ts.”
 
 This prevents re-explaining setup and avoids architectural drift.
+
+Kita lanjut Module 03 — Kost Admin di backend-nest (NestJS + TS). Fokus: Rooms Smoke Test (Opsi A). Ini migrasi dari Express JS; legacy adalah SSOT. Database SSOT: kost_schema.sql. Layering: SQL → Repo → Controller → View (EJS). No ORM. No inline SQL.
+
+Status saat ini:
+
+Server running: http://localhost:3000
+
+Rooms module sudah parity dengan legacy (controller + repo + sql + views).
+
+Log system sudah OK (request_id, error handler, devtools well-known 204).
+
+Tujuan chat ini:
+Lakukan smoke test Rooms end-to-end dan pastikan:
+
+semua endpoint berjalan
+
+validasi & handling error sama seperti legacy
+
+status transitions benar
+
+UI render benar
+
+DB constraint tidak error
+
+logging tindakan CUD terbaca dan traceable
+
+Routes Rooms:
+
+GET /admin/kost/rooms
+
+GET /admin/kost/rooms/new
+
+POST /admin/kost/rooms
+
+GET /admin/kost/rooms/:id
+
+GET /admin/kost/rooms/:id/edit
+
+POST /admin/kost/rooms/:id
+
+POST /admin/kost/rooms/:id/delete
+
+POST /admin/kost/rooms/:id/block
+
+POST /admin/kost/rooms/:id/unblock
+
+POST /admin/kost/rooms/:id/change-type
+(opsional) POST /admin/kost/rooms/:id/activate
+
+Mulai dengan menyusun checklist smoke test + expected result + query verifikasi DB.
+
+Checklist Smoke Test Rooms (biar kamu langsung siap jalan di chat baru)
+A. List page
+
+Buka /admin/kost/rooms
+
+Expected: page load, tabel tampil
+
+Filter room_type_id bekerja (jika ada dropdown)
+
+Klik satu room → ke detail
+
+DB check (opsional):
+
+tidak perlu query, cukup visual dulu.
+
+B. Create flow
+
+Buka /admin/kost/rooms/new
+
+Submit kosong
+
+Expected: error flash / error tampil, tidak insert
+
+Submit valid room
+
+Expected: redirect ke detail room baru
+
+Submit dengan code yang sama
+
+Expected: error 23505 → pesan “code sudah dipakai”, tidak insert
+
+DB check (optional):
+
+select id, code, status, room_type_id, floor, position_zone
+from kost.rooms
+order by id desc
+limit 5;
+
+C. Detail page + amenities
+
+Buka detail room baru /admin/kost/rooms/:id
+
+Expected: badge status benar
+
+Section amenities tampil (walau kosong)
+
+hasAC/hasFAN konsisten dengan amenities list
+
+D. Edit flow
+
+Buka /admin/kost/rooms/:id/edit
+
+Ubah position_zone ke kosong ("")
+
+Expected: save sukses (harus jadi NULL di DB)
+
+Ubah floor ke nilai invalid (mis 3) via devtools
+
+Expected: validation fail, tidak update
+
+Ubah code ke existing code
+
+Expected: 23505 handled
+
+DB check:
+
+select id, code, floor, position_zone, status, updated_at
+from kost.rooms
+where id = <ID>;
+
+E. Status transitions
+
+Block → /block
+
+Expected: status MAINTENANCE
+
+Unblock → /unblock
+
+Expected: status AVAILABLE
+
+Delete → /delete
+
+Expected: status INACTIVE (soft delete), kembali ke list
+
+DB check:
+
+select id, code, status
+from kost.rooms
+where id = <ID>;
+
+F. Change type
+
+Change room_type_id via /change-type
+
+Expected: updated room_type_id, redirect detail ?type_changed=1
+
+Tidak ada occupancy check (sesuai legacy)

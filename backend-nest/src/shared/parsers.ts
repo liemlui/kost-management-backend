@@ -17,7 +17,7 @@ export class ValidationError extends Error {
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
+  return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 function asString(v: unknown): string | null {
@@ -123,9 +123,6 @@ export function requiredNumber(v: unknown, field: string, opts: NumOpts = {}): n
 
 /**
  * Checkbox / toggle parser for HTML forms.
- * Common cases:
- * - unchecked checkbox => undefined (field absent) or ""  => false
- * - checked checkbox => "on" (default) or "true" or "1"  => true
  */
 export function checkboxToBool(v: unknown): boolean {
   if (v === true) return true;
@@ -140,7 +137,6 @@ export function checkboxToBool(v: unknown): boolean {
   if (s === "on" || s === "true" || s === "1" || s === "yes") return true;
   if (s === "off" || s === "false" || s === "0" || s === "no") return false;
 
-  // safest default: treat unknown truthy strings as false (avoid accidental enabling)
   return false;
 }
 
@@ -151,7 +147,7 @@ export function optionalDateISO(v: unknown): string | null {
   // YYYY-MM-DD
   if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return null;
 
-  // Validate actual calendar date (e.g. reject 2026-02-31)
+  // Validate actual calendar date
   const [yStr, mStr, dStr] = t.split("-");
   const y = Number(yStr);
   const m = Number(mStr);
@@ -180,10 +176,6 @@ export function requiredDateISO(v: unknown, field: string): string {
   return d;
 }
 
-/**
- * Enum parser that NEVER guesses allowed values.
- * Controller must pass allowed list (from domain constants, aligned with kost_schema.sql).
- */
 export function parseEnum<T extends string>(
   v: unknown,
   field: string,
@@ -203,12 +195,10 @@ export function parseEnum<T extends string>(
   return hit;
 }
 
-/**
- * Utility to parse pagination query params safely.
- * - page: 1..N (default 1)
- * - limit: 1..maxLimit (default 20)
- */
-export function parsePaging(input: unknown, maxLimit = 200): { page: number; limit: number; offset: number } {
+export function parsePaging(
+  input: unknown,
+  maxLimit = 200,
+): { page: number; limit: number; offset: number } {
   let page = 1;
   let limit = 20;
 
@@ -223,10 +213,6 @@ export function parsePaging(input: unknown, maxLimit = 200): { page: number; lim
   return { page, limit, offset };
 }
 
-/**
- * Helper for building a single ValidationError from multiple field checks.
- * Use when you want to validate several fields and return all issues at once.
- */
 export function collectValidation(run: (issues: ParseIssue[]) => void): void {
   const issues: ParseIssue[] = [];
   run(issues);
@@ -235,9 +221,6 @@ export function collectValidation(run: (issues: ParseIssue[]) => void): void {
   }
 }
 
-/**
- * Non-throwing helpers (handy for “form re-render with errors” without try/catch spam).
- */
 export function safeParse<T>(
   fn: () => T,
 ): { ok: true; value: T } | { ok: false; error: ValidationError } {
@@ -245,10 +228,9 @@ export function safeParse<T>(
     return { ok: true, value: fn() };
   } catch (e: unknown) {
     if (e instanceof ValidationError) return { ok: false, error: e };
-    throw e; // <-- jangan disamarkan
+    throw e;
   }
 }
-
 
 export function optionalSelectInt(v: unknown, opts: IntOpts = {}): number | null {
   const t = trimOrNull(v);

@@ -36,17 +36,20 @@ function levelFromStatus(statusCode: number): LogLevel {
   return "info";
 }
 
+
 @Injectable()
 export class RequestLoggerMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction): void {
     const start = nowMs();
 
     const requestId = randomUUID();
-    res.setHeader("X-Request-Id", requestId);
+    res.setHeader("x-request-id", requestId);
     res.locals.requestId = requestId;
 
     const method = req.method;
     const path = req.originalUrl || req.url;
+
+
 
     res.on("finish", () => {
       const ms = nowMs() - start;
